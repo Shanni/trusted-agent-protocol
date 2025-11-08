@@ -16,7 +16,7 @@ python populate_sample_data.py
 python main.py
 ```
 
-Access the service at http://localhost:8080 (docs at /docs)
+Access the service at http://localhost:9002 (docs at /docs)
 
 ## Key Features
 
@@ -50,7 +50,7 @@ The Agent Registry supports multiple keys per agent, enabling key rotation and m
 
 #### 1. Register Agent with Initial Key
 ```bash
-curl -X POST http://localhost:8080/agents/register \
+curl -X POST http://localhost:9002/agents/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Sample Payment Directory",
@@ -64,7 +64,7 @@ curl -X POST http://localhost:8080/agents/register \
 
 #### 2. Add Additional Keys
 ```bash
-curl -X POST http://localhost:8080/agents/1/keys \
+curl -X POST http://localhost:9002/agents/1/keys \
   -H "Content-Type: application/json" \
   -d '{
     "key_id": "backup-ed25519",
@@ -78,7 +78,7 @@ curl -X POST http://localhost:8080/agents/1/keys \
 #### 3. CDN Proxy Key Lookup
 The CDN proxy uses the `/keys/{key_id}` endpoint to retrieve keys for signature verification:
 ```bash
-curl http://localhost:8080/keys/primary-rsa
+curl http://localhost:9002/keys/primary-rsa
 ```
 
 Returns:
@@ -119,7 +119,7 @@ This sample demonstrates:
 
 ## Registry UI
 
-Access the web interface at http://localhost:8080/ui for:
+Access the web interface at http://localhost:9002/ui for:
 - Viewing registered agents
 - Adding new agents through forms
 - Testing agent registration flow
