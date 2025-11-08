@@ -1438,7 +1438,7 @@ def main():
         import time
         nonce = str(uuid.uuid4())
         created = int(time.time())
-        expires = created + 8 * 60  # 8 minutes from now
+        expires = created + 15 * 60  # 15 minutes from now
         keyId = "primary-ed25519"  # Default to Ed25519 since it's the default algorithm
         tag = "agent-browser-auth"
         
@@ -1498,7 +1498,7 @@ def main():
             import time
             nonce = str(uuid.uuid4())
             created = int(time.time())
-            expires = created + 8 * 60  # 8 minutes from now
+            expires = created + 15 * 60  # 15 minutes from now
             
             # Use algorithm-appropriate keyId
             if signature_algorithm == "ed25519":
@@ -1565,7 +1565,7 @@ def main():
             # If parsing fails, use defaults
             nonce = str(uuid.uuid4())
             created = int(time.time())
-            expires = created + 8 * 60
+            expires = created + 15 * 60
         
         # Create updated input data
         updated_input = {
@@ -1646,7 +1646,7 @@ def main():
                     st.error("Invalid JSON format in input data")
                     nonce = str(uuid.uuid4())
                     created = int(time.time())
-                    expires = created + 8 * 60
+                    expires = created + 15 * 60
                     tag = tag_value
                 # Parse URL components for RFC 9421
                 print(f"🔍 Attempting to parse URL: '{reference_url}'")

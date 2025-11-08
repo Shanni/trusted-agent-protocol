@@ -12,7 +12,7 @@ PORT=3001
 
 # Upstream Services
 MERCHANT_BACKEND_URL=http://localhost:8000
-AGENT_REGISTRY_URL=http://localhost:8081
+AGENT_REGISTRY_URL=http://localhost:9002
 
 # Debug Configuration
 DEBUG=true

@@ -150,7 +150,7 @@ const AGENT_REGISTRY_URL = 'http://localhost:9002';
 
 // Cache for fetched keys to avoid repeated API calls
 const keyCache = new Map();
-const CACHE_TTL = 5 ; // 5 milliseconds
+const CACHE_TTL = 300000 ; // 5 minutes (300000 milliseconds)
 
 // Nonce cache to prevent replay attacks
 const nonceCache = new Map();
@@ -476,10 +476,15 @@ const signatureKeyId = signatureData.keyId;
     }
     
     if (signatureData.expires && signatureData.expires < now) {
+      const ageSeconds = now - signatureData.created;
+      const expiredSeconds = now - signatureData.expires;
       console.log('❌ CDN: Signature has expired');
+      console.log(`  - Created: ${new Date(signatureData.created * 1000).toISOString()} (${ageSeconds}s ago)`);
+      console.log(`  - Expires: ${new Date(signatureData.expires * 1000).toISOString()} (expired ${expiredSeconds}s ago)`);
+      console.log(`  - Current: ${new Date(now * 1000).toISOString()}`);
       return sendErrorResponse(res, 403, '⏰ Signature Expired', 
         'The signature has expired and is no longer valid.', 
-        `Expired at: ${new Date(signatureData.expires * 1000).toISOString()}`);
+        `Expired ${expiredSeconds} seconds ago. Created ${ageSeconds} seconds ago.`);
     }
     
     // Validate nonce to prevent replay attacks
@@ -661,6 +666,16 @@ app.use((req, res, next) => {
     next();
   }
 });
+
+// Proxy /product/* requests to backend after signature verification
+app.use('/product', createProxyMiddleware({
+  target: 'http://localhost:8000',
+  changeOrigin: true,
+  logLevel: 'debug',
+  onProxyReq: (proxyReq, req, res) => {
+    console.log(`🔄 Forwarding /product request to backend: ${sanitizeLogOutput(req.path)}`);
+  }
+}));
 
 // Proxy API requests to backend (simple passthrough)
 app.use('/api', createProxyMiddleware({

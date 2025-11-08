@@ -9,6 +9,7 @@
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import HTMLResponse
 
 # Load environment variables
 load_dotenv()
@@ -317,6 +318,42 @@ async def update_agent(agent_id: int, agent_update: AgentUpdate, db: Session = D
         print(f"❌ Error updating agent: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update agent: {str(e)}")
 
+@app.delete("/agents/{agent_id}/keys/{key_id}", response_model=Message)
+async def delete_agent_key(agent_id: int, key_id: str, db: Session = Depends(get_db)):
+    """
+    Delete a specific key from an agent
+    """
+    try:
+        # Check if agent exists
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            print(f"❌ Agent not found for ID: {agent_id}")
+            raise HTTPException(status_code=404, detail=f"Agent not found for ID: {agent_id}")
+        
+        # Find the key
+        key = db.query(AgentKey).filter(
+            AgentKey.agent_id == agent_id,
+            AgentKey.key_id == key_id
+        ).first()
+        
+        if not key:
+            print(f"❌ Key '{key_id}' not found for agent ID: {agent_id}")
+            raise HTTPException(status_code=404, detail=f"Key '{key_id}' not found for agent {agent_id}")
+        
+        # Delete the key
+        db.delete(key)
+        db.commit()
+        
+        print(f"✅ Deleted key '{key_id}' from agent ID: {agent_id}")
+        return {"message": f"Key '{key_id}' deleted from agent {agent_id}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error deleting agent key: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete agent key: {str(e)}")
+
 @app.delete("/agents/{agent_id}", response_model=Message)
 async def deactivate_agent(agent_id: int, db: Session = Depends(get_db)):
     """
@@ -367,6 +404,111 @@ async def get_agent_by_domain(domain: str, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"❌ Error retrieving agent: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve agent: {str(e)}")
+
+@app.get("/ui", response_class=HTMLResponse)
+async def ui_redirect():
+    """
+    Redirect to Streamlit UI for agent management
+    """
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Agent Registry UI</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding: 50px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container {
+                max-width: 600px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                padding: 40px;
+                border-radius: 20px;
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            }
+            h1 { margin-bottom: 20px; font-size: 2.5em; }
+            p { font-size: 1.2em; line-height: 1.6; margin-bottom: 30px; }
+            .button {
+                display: inline-block;
+                padding: 15px 30px;
+                background: white;
+                color: #667eea;
+                text-decoration: none;
+                border-radius: 50px;
+                font-weight: bold;
+                font-size: 1.1em;
+                transition: transform 0.3s, box-shadow 0.3s;
+                margin: 10px;
+            }
+            .button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            }
+            .api-link {
+                margin-top: 30px;
+                padding-top: 30px;
+                border-top: 1px solid rgba(255,255,255,0.3);
+            }
+            .api-link a {
+                color: #ffd700;
+                text-decoration: none;
+            }
+            .api-link a:hover {
+                text-decoration: underline;
+            }
+            .info {
+                background: rgba(255, 255, 255, 0.2);
+                padding: 20px;
+                border-radius: 10px;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔐 Agent Registry</h1>
+            <p>Welcome to the Trusted Agent Protocol Registry Service</p>
+            
+            <div class="info">
+                <h3>📋 Management UI</h3>
+                <p>For a full-featured web interface, start the Streamlit UI:</p>
+                <code style="background: rgba(0,0,0,0.3); padding: 10px; display: block; border-radius: 5px; margin: 10px 0;">
+                    cd agent-registry && streamlit run registry_ui.py
+                </code>
+                <p style="font-size: 0.9em; margin-top: 10px;">
+                    The UI will be available at <strong>http://localhost:8501</strong>
+                </p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <a href="/docs" class="button">📚 API Documentation</a>
+                <a href="/agents" class="button">👥 View Agents (JSON)</a>
+            </div>
+            
+            <div class="api-link">
+                <p>API Endpoints:</p>
+                <p>
+                    <a href="/agents">GET /agents</a> • 
+                    <a href="/docs#/default/register_agent_agents_register_post">POST /agents/register</a> • 
+                    <a href="/docs">More...</a>
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9002)
