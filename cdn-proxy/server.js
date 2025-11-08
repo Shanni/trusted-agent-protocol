@@ -641,42 +641,43 @@ app.get('/test-proxy', (req, res) => {
   `);
 });
 
-// Signature verification for /products/ URLs
+// Signature verification middleware - only for sensitive operations
 app.use((req, res, next) => {
   console.log(`🚀 CDN-Proxy received: ${sanitizeLogOutput(req.method)} ${sanitizeLogOutput(req.url)} from ${sanitizeLogOutput(req.get('host'))}`);
   console.log(`🔍 Request headers: ${Object.keys(req.headers).join(', ')}`);
   
   const url = req.url.toLowerCase();
   const hasSignatureHeaders = req.headers['signature-input'] && req.headers['signature'];
-  const isProductsApiRoute = url.startsWith('/product/');
+  
+  // Define sensitive operations that require agent signatures
+  const sensitiveOperations = [
+    '/api/cart/',           // Cart operations (checkout)
+    '/api/orders',          // Order history
+    '/api/premium',         // Premium features
+    '/api/user'             // User data
+  ];
+  
+  // Check if this is a sensitive operation
+  const isSensitiveOperation = sensitiveOperations.some(op => url.startsWith(op));
 
-  if (isProductsApiRoute) {
-    // /products/ route - signature is required
+  if (isSensitiveOperation) {
+    // Sensitive operation - signature is required
     if (!hasSignatureHeaders) {
-      console.log(`❌ /products/ route requires signatures - rejecting: ${sanitizeLogOutput(req.url)}`);
+      console.log(`❌ Sensitive operation requires signatures - rejecting: ${sanitizeLogOutput(req.url)}`);
       return sendErrorResponse(res, 403, '🔐 Signature Required', 
-        'Access to /products/ requires verification from trusted payment directory agents.',
+        'This operation requires verification from a trusted agent.',
         'Missing required signature headers: signature-input, signature');
     }
     
     // Signature headers provided - verify them
-    console.log(`🔐 /products/ route with signatures - verifying: ${sanitizeLogOutput(req.url)}`);
+    console.log(`🔐 Sensitive operation with signatures - verifying: ${sanitizeLogOutput(req.url)}`);
     verifySignature(req, res, next).catch(next);
   } else {
-    // Non-/product/ route without signatures - allow
+    // Public route - no signature needed (browsing, viewing products, etc.)
+    console.log(`✅ Public route - no signature required: ${sanitizeLogOutput(req.url)}`);
     next();
   }
 });
-
-// Proxy /product/* requests to backend after signature verification
-app.use('/product', createProxyMiddleware({
-  target: 'http://localhost:3000',
-  changeOrigin: true,
-  logLevel: 'debug',
-  onProxyReq: (proxyReq, req, res) => {
-    console.log(`🔄 Forwarding /product request to backend: ${sanitizeLogOutput(req.path)}`);
-  }
-}));
 
 // Proxy API requests to backend (simple passthrough)
 app.use('/api', createProxyMiddleware({
