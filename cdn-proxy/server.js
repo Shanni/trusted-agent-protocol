@@ -94,7 +94,8 @@ const PORT = process.env.PORT || 3001; // Proxy runs on 3001, React on 3000
 // Security middleware - Add CSP and other security headers
 app.use((req, res, next) => {
   // Content Security Policy to prevent XSS (allow external images for product images)
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none';");
+  // Allow connections to localhost:8000 (backend) and localhost:3000 (React frontend)
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self' http://localhost:3000 http://localhost:8000 ws: wss: ws://localhost:* wss://localhost:*; frame-ancestors 'none';");
   
   // Additional security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -669,7 +670,7 @@ app.use((req, res, next) => {
 
 // Proxy /product/* requests to backend after signature verification
 app.use('/product', createProxyMiddleware({
-  target: 'http://localhost:8000',
+  target: 'http://localhost:3000',
   changeOrigin: true,
   logLevel: 'debug',
   onProxyReq: (proxyReq, req, res) => {
