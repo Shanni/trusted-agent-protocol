@@ -41,7 +41,9 @@ function App() {
             </main>
             <footer style={styles.footer}>
               <div style={styles.footerContent}>
-                <p>&copy; 2025 TAP Sample Merchant. All rights reserved.</p>
+                <p style={styles.footerText}>🎨 TAP Shanni Art Gallery</p>
+                <p style={styles.footerSubtext}>Unique illustrations & art pieces by <a href="https://www.instagram.com/shanni_daily_drawing/" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>@shanni_daily_drawing</a></p>
+                <p style={styles.footerCopy}>&copy; 2025 TAP Shanni Art. All rights reserved.</p>
               </div>
             </footer>
           </div>
@@ -54,7 +56,7 @@ function App() {
 const styles = {
   app: {
     minHeight: '100vh',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF5EE',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -62,16 +64,37 @@ const styles = {
     flex: 1,
   },
   footer: {
-    backgroundColor: '#2c3e50',
-    color: 'white',
-    padding: '2rem 0',
+    backgroundColor: '#A0522D',
+    color: '#FFF5EE',
+    padding: '3rem 0',
     marginTop: '4rem',
+    borderTop: '3px solid #D2691E',
   },
   footerContent: {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: '0 1rem',
     textAlign: 'center',
+  },
+  footerText: {
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    marginBottom: '0.5rem',
+    fontFamily: 'Georgia, serif',
+  },
+  footerSubtext: {
+    fontSize: '1rem',
+    marginBottom: '1rem',
+    color: '#FFE4E1',
+  },
+  footerLink: {
+    color: '#FFE4E1',
+    textDecoration: 'underline',
+    fontWeight: 'bold',
+  },
+  footerCopy: {
+    fontSize: '0.9rem',
+    opacity: 0.8,
   },
 };
 

@@ -18,7 +18,7 @@ const Header = () => {
     <header style={styles.header}>
       <div style={styles.container}>
         <Link to="/" style={styles.logo}>
-          TAP Sample Merchant
+          🎨 TAP Shanni Art
         </Link>
         
         <nav style={styles.nav}>
@@ -36,10 +36,11 @@ const Header = () => {
 
 const styles = {
   header: {
-    backgroundColor: '#2c3e50',
-    color: 'white',
+    backgroundColor: '#A0522D',
+    color: '#FFF5EE',
     padding: '1rem 0',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    boxShadow: '0 2px 4px rgba(160,82,45,0.3)',
+    borderBottom: '3px solid #D2691E',
   },
   container: {
     maxWidth: '1200px',
@@ -52,8 +53,10 @@ const styles = {
   logo: {
     fontSize: '1.5rem',
     fontWeight: 'bold',
-    color: 'white',
+    color: '#FFF5EE',
     textDecoration: 'none',
+    fontFamily: 'Georgia, serif',
+    letterSpacing: '0.5px',
   },
   nav: {
     display: 'flex',
@@ -61,19 +64,24 @@ const styles = {
     alignItems: 'center',
   },
   navLink: {
-    color: 'white',
+    color: '#FFF5EE',
     textDecoration: 'none',
     padding: '0.5rem 1rem',
-    borderRadius: '4px',
-    transition: 'background-color 0.3s',
+    borderRadius: '20px',
+    transition: 'all 0.3s',
+    ':hover': {
+      backgroundColor: '#8B4513',
+    },
   },
   cartLink: {
-    color: 'white',
+    color: '#8B4513',
     textDecoration: 'none',
-    padding: '0.5rem 1rem',
-    backgroundColor: '#e74c3c',
-    borderRadius: '4px',
+    padding: '0.5rem 1.5rem',
+    backgroundColor: '#FFE4E1',
+    borderRadius: '20px',
     fontWeight: 'bold',
+    border: '2px solid #D2691E',
+    transition: 'all 0.3s',
   },
 };
 

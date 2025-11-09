@@ -73,7 +73,10 @@ const ProductsPage = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Products</h1>
+      <div style={styles.hero}>
+        <h1 style={styles.title}>🎨 Shanni Art Gallery</h1>
+        <p style={styles.subtitle}>Discover unique illustrations and art pieces</p>
+      </div>
       
       <SearchFilters onSearch={handleSearch} onFilter={handleFilter} />
       
@@ -102,51 +105,72 @@ const styles = {
     margin: '0 auto',
     padding: '2rem 1rem',
   },
-  title: {
-    fontSize: '2rem',
-    marginBottom: '2rem',
-    color: '#2c3e50',
+  hero: {
     textAlign: 'center',
+    padding: '3rem 1rem',
+    background: 'linear-gradient(135deg, #FFE4E1 0%, #FFF5EE 100%)',
+    borderRadius: '20px',
+    marginBottom: '2rem',
+    border: '3px solid #D2691E',
+  },
+  title: {
+    fontSize: '2.5rem',
+    marginBottom: '0.5rem',
+    color: '#A0522D',
+    fontFamily: 'Georgia, serif',
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    fontSize: '1.2rem',
+    color: '#8B4513',
+    fontStyle: 'italic',
   },
   loading: {
     textAlign: 'center',
     fontSize: '1.2rem',
-    color: '#666',
+    color: '#A0522D',
     padding: '3rem',
   },
   error: {
     textAlign: 'center',
-    color: '#e74c3c',
+    color: '#8B4513',
     padding: '2rem',
-    backgroundColor: '#fdf2f2',
-    borderRadius: '8px',
-    border: '1px solid #fecaca',
+    backgroundColor: '#FFE4E1',
+    borderRadius: '20px',
+    border: '2px solid #D2691E',
   },
   retryButton: {
     marginTop: '1rem',
-    backgroundColor: '#3498db',
-    color: 'white',
-    border: 'none',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
+    backgroundColor: '#A0522D',
+    color: '#FFF5EE',
+    border: '2px solid #D2691E',
+    padding: '0.75rem 1.5rem',
+    borderRadius: '20px',
     cursor: 'pointer',
+    fontWeight: 'bold',
+    transition: 'all 0.3s',
   },
   resultsInfo: {
     marginBottom: '1rem',
-    color: '#666',
+    color: '#8B4513',
     fontSize: '0.9rem',
+    fontWeight: '500',
   },
   noProducts: {
     textAlign: 'center',
-    color: '#666',
+    color: '#A0522D',
     padding: '3rem',
     fontSize: '1.1rem',
+    backgroundColor: '#FFE4E1',
+    borderRadius: '20px',
+    border: '2px solid #D2691E',
   },
   productsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
     gap: '2rem',
     marginTop: '2rem',
+    padding: '1rem 0',
   },
 };
 
