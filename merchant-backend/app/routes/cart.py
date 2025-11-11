@@ -22,12 +22,108 @@ from app.schemas import (
     CartFulfillRequest, CartFulfillResponse, Message
 )
 import uuid
+import os
+import requests
+from datetime import datetime, timedelta
+from typing import Optional, Dict
+from pydantic import BaseModel, EmailStr
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
+SOLANA_PAYMENT_API = os.getenv("SOLANA_PAYMENT_API", "https://api.projectsienna.xyz/api/payment")
+SOLANA_PAYMENT_NETWORK = os.getenv("SOLANA_PAYMENT_NETWORK", "devnet")
+SOLANA_PAYMENT_QUOTES: Dict[str, dict] = {}
+
+
+def calculate_cart_totals(cart):
+    """Calculate subtotal, shipping, tax, and total for a cart"""
+    if not cart.items:
+        return {
+            "subtotal": 0.0,
+            "shipping": 0.0,
+            "tax": 0.0,
+            "total": 0.0,
+        }
+
+    subtotal = sum(item.product.price * item.quantity for item in cart.items)
+    shipping_cost = 9.99 if subtotal < 50 else 0.0
+    tax_amount = subtotal * 0.08
+    total_amount = subtotal + shipping_cost + tax_amount
+
+    return {
+        "subtotal": float(round(subtotal, 2)),
+        "shipping": float(round(shipping_cost, 2)),
+        "tax": float(round(tax_amount, 2)),
+        "total": float(round(total_amount, 2)),
+    }
+
+def request_solana_payment(amount, currency="USDC", metadata=None):
+    """Request Solana payment details from external service"""
+    params = {
+        "network": SOLANA_PAYMENT_NETWORK,
+        "amount": amount,
+    }
+    if currency:
+        params["currency"] = currency
+
+    headers = {}
+    api_key = os.getenv("SOLANA_PAYMENT_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        response = requests.get(SOLANA_PAYMENT_API, params=params, headers=headers, timeout=30)
+        response.raise_for_status()
+        payment_data = response.json().get("payment")
+        if not payment_data:
+            raise ValueError("Invalid response from Solana payment API")
+
+        payment_data["amountUSDC"] = payment_data.get("amountUSDC") or amount
+        payment_data["network"] = SOLANA_PAYMENT_NETWORK
+
+        if metadata:
+            payment_data["metadata"] = metadata
+
+        return payment_data
+    except requests.HTTPError as http_err:
+        status_code = http_err.response.status_code
+        content = http_err.response.text
+        raise HTTPException(
+            status_code=status_code,
+            detail=f"Solana payment API error: {content}"
+        )
+    except requests.RequestException as req_err:
+        raise HTTPException(status_code=503, detail=f"Solana payment service unavailable: {str(req_err)}")
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Failed to request Solana payment: {str(err)}")
+
+
+def cleanup_expired_solana_quotes():
+    """Remove expired Solana payment quotes from memory"""
+    if not SOLANA_PAYMENT_QUOTES:
+        return
+    now = datetime.utcnow()
+    expired_ids = [quote_id for quote_id, data in SOLANA_PAYMENT_QUOTES.items() if data["expires_at"] < now]
+    for quote_id in expired_ids:
+        SOLANA_PAYMENT_QUOTES.pop(quote_id, None)
+
+
+class SolanaCheckoutRequest(BaseModel):
+    customer_name: str
+    customer_email: EmailStr
+    customer_phone: Optional[str] = None
+    shipping_address: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class SolanaConfirmRequest(BaseModel):
+    quote_id: str
+    transaction_signature: str
+    payer_wallet: Optional[str] = None
+
+
 def generate_order_number():
     """Generate a unique order number"""
-    from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     random_suffix = uuid.uuid4().hex[:6].upper()
     return f"ORD-{timestamp}-{random_suffix}"
@@ -568,6 +664,33 @@ def finalize_cart(
         finalize_cart._finalized_carts = {}
     finalize_cart._finalized_carts[payment_session_id] = finalized_cart_data
     
+    # Build payment methods list (credit card + Solana USDC)
+    payment_methods = [
+        {
+            "type": "credit_card",
+            "provider": "merchant_payment_processor",
+            "endpoint": f"http://localhost:8000/api/cart/{session_id}/fulfill",
+            "method": "POST",
+            "required_fields": [
+                "payment_session_id",
+                "card_number",
+                "expiry_date",
+                "cvv",
+                "cardholder_name"
+            ]
+        },
+        {
+            "type": "solana_usdc",
+            "provider": "solana_payment_facilitator",
+            "endpoint": f"http://localhost:8000/api/cart/{session_id}/solana/quote",
+            "method": "POST",
+            "required_fields": [
+                "customer_name",
+                "customer_email"
+            ],
+            "confirmation_endpoint": f"http://localhost:8000/api/cart/{session_id}/solana/confirm"
+        }
+    ]
     # Return 402 Payment Required with x402 protocol headers and payment details
     from fastapi import Response
     from fastapi.responses import JSONResponse
@@ -584,21 +707,7 @@ def finalize_cart(
             "total": round(total_amount, 2),
             "currency": "USD"
         },
-        "payment_methods": [
-            {
-                "type": "credit_card",
-                "provider": "merchant_payment_processor",
-                "endpoint": f"http://localhost:8000/api/cart/{session_id}/fulfill",
-                "method": "POST",
-                "required_fields": [
-                    "payment_session_id",
-                    "card_number",
-                    "expiry_date", 
-                    "cvv",
-                    "cardholder_name"
-                ]
-            }
-        ],
+        "payment_methods": payment_methods,
         "expires_at": "2024-12-31T23:59:59Z",  # In production, set reasonable expiration
         "order_summary": {
             "items": finalized_cart_data['items'],
@@ -621,6 +730,179 @@ def finalize_cart(
     response.headers["X-Payment-Provider"] = "merchant_payment_processor"
     
     return response
+
+
+@router.post("/{session_id}/solana/quote")
+def request_solana_quote(
+    session_id: str,
+    solana_request: SolanaCheckoutRequest,
+    db: Session = Depends(get_db)
+):
+    """Generate Solana USDC payment instructions for the current cart"""
+    cleanup_expired_solana_quotes()
+
+    cart = db.query(CartModel).filter(CartModel.session_id == session_id).first()
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+    if not cart.items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    totals = calculate_cart_totals(cart)
+    if totals["total"] <= 0:
+        raise HTTPException(status_code=400, detail="Cart total must be greater than zero for Solana checkout")
+
+    payment_data = request_solana_payment(totals["total"])
+
+    quote_id = str(uuid.uuid4())
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+    SOLANA_PAYMENT_QUOTES[quote_id] = {
+        "session_id": session_id,
+        "cart_id": cart.id,
+        "totals": totals,
+        "payment": payment_data,
+        "customer": {
+            "name": solana_request.customer_name,
+            "email": solana_request.customer_email,
+            "phone": solana_request.customer_phone,
+        },
+        "shipping_address": solana_request.shipping_address,
+        "metadata": solana_request.metadata or {},
+        "created_at": datetime.utcnow(),
+        "expires_at": expires_at,
+    }
+
+    return {
+        "quote_id": quote_id,
+        "network": SOLANA_PAYMENT_NETWORK,
+        "expires_at": expires_at.isoformat() + "Z",
+        "totals": totals,
+        "payment": payment_data,
+        "instructions": {
+            "message": "Send USDC using the Solana network to complete your purchase",
+            "steps": [
+                "Open your Solana wallet",
+                "Send the requested USDC amount to the recipient wallet",
+                "Use the provided token account and memo if required",
+                "Return here and enter the transaction signature to confirm"
+            ]
+        }
+    }
+
+
+@router.post("/{session_id}/solana/confirm")
+def confirm_solana_payment(
+    session_id: str,
+    confirm_request: SolanaConfirmRequest,
+    db: Session = Depends(get_db)
+):
+    """Confirm Solana payment by recording transaction signature and creating the order"""
+    cleanup_expired_solana_quotes()
+
+    quote_data = SOLANA_PAYMENT_QUOTES.get(confirm_request.quote_id)
+    if not quote_data:
+        raise HTTPException(status_code=404, detail="Solana payment quote not found or expired")
+
+    if quote_data["session_id"] != session_id:
+        raise HTTPException(status_code=400, detail="Quote does not match the provided cart session")
+
+    if quote_data["expires_at"] < datetime.utcnow():
+        SOLANA_PAYMENT_QUOTES.pop(confirm_request.quote_id, None)
+        raise HTTPException(status_code=410, detail="Solana payment quote has expired. Please request a new quote.")
+
+    cart = db.query(CartModel).filter(CartModel.session_id == session_id).first()
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+    if not cart.items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    totals = quote_data["totals"]
+    payment_data = quote_data["payment"]
+    customer_info = quote_data["customer"]
+    shipping_address = quote_data.get("shipping_address") or "Digital Delivery - Solana Checkout"
+
+    # Create order
+    order = OrderModel(
+        order_number=generate_order_number(),
+        customer_email=customer_info["email"],
+        customer_name=customer_info["name"],
+        total_amount=totals["total"],
+        status="confirmed",
+        shipping_address=shipping_address,
+        phone=customer_info.get("phone"),
+        payment_method="solana_usdc",
+        payment_status="processed",
+        card_last_four=None,
+        card_brand="solana_usdc",
+        special_instructions=f"Solana transaction signature: {confirm_request.transaction_signature}"
+    )
+
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+
+    # Create order items
+    for cart_item in cart.items:
+        order_item = OrderItemModel(
+            order_id=order.id,
+            product_id=cart_item.product_id,
+            quantity=cart_item.quantity,
+            price=cart_item.product.price
+        )
+        db.add(order_item)
+
+    # Clear cart
+    db.query(CartItemModel).filter(CartItemModel.cart_id == cart.id).delete()
+    db.commit()
+
+    # Remove quote after successful processing
+    SOLANA_PAYMENT_QUOTES.pop(confirm_request.quote_id, None)
+
+    tracking_number = f"TRK{uuid.uuid4().hex[:10].upper()}"
+
+    return {
+        "status": "success",
+        "message": "Solana payment confirmed and order created",
+        "order": {
+            "id": order.id,
+            "order_number": order.order_number,
+            "customer_name": order.customer_name,
+            "customer_email": order.customer_email,
+            "total_amount": float(order.total_amount),
+            "subtotal": totals["subtotal"],
+            "tax_amount": totals["tax"],
+            "shipping_cost": totals["shipping"],
+            "status": order.status,
+            "payment_method": order.payment_method,
+            "payment_status": order.payment_status,
+            "created_at": order.created_at.isoformat(),
+        },
+        "payment": {
+            "method": "solana_usdc",
+            "amount": totals["total"],
+            "currency": "USDC",
+            "transaction_signature": confirm_request.transaction_signature,
+            "payer_wallet": confirm_request.payer_wallet,
+            "recipient_wallet": payment_data.get("recipientWallet"),
+            "token_account": payment_data.get("tokenAccount"),
+            "token_mint": payment_data.get("mint"),
+            "network": payment_data.get("cluster", SOLANA_PAYMENT_NETWORK),
+            "quote_id": confirm_request.quote_id,
+        },
+        "solana_instruction": {
+            "message": payment_data.get("message"),
+            "amount_lamports": payment_data.get("amount"),
+            "amount_usdc": payment_data.get("amountUSDC"),
+        },
+        "fulfillment": {
+            "tracking_number": tracking_number,
+            "estimated_delivery": "5-7 business days",
+            "shipping_carrier": "Standard Shipping",
+            "status": "processing"
+        }
+    }
 
 @router.post("/{session_id}/fulfill", response_model=CartFulfillResponse)
 def fulfill_cart(

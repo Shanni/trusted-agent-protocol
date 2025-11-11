@@ -97,6 +97,12 @@ export const ordersAPI = {
   cancelOrder: (id) => api.delete(`/api/orders/${id}`),
 };
 
+// Solana Checkout API
+export const solanaAPI = {
+  requestQuote: (sessionId, payload) => api.post(`/api/cart/${sessionId}/solana/quote`, payload),
+  confirmPayment: (sessionId, payload) => api.post(`/api/cart/${sessionId}/solana/confirm`, payload),
+};
+
 // Individual exports for convenience
 export const getProduct = (id) => productsAPI.getProduct(id).then(response => response.data);
 

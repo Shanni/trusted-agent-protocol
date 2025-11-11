@@ -10,49 +10,6 @@ This will seed the database with 15 beautiful art products!
 
 ---
 
-## Start All Services
-
-### Option 1: Manual (Recommended for Development)
-
-```bash
-# Terminal 1: Backend
-cd merchant-backend
-python main.py
-
-# Terminal 2: Frontend  
-cd merchant-frontend
-npm start
-
-# Terminal 3: CDN Proxy
-cd cdn-proxy
-node server.js
-
-# Terminal 4: Agent Registry
-cd agent-registry
-python main.py
-
-# Optional Terminal 5: TAP Agent
-cd tap-agent
-streamlit run agent_app_v3.py
-```
-
-### Option 2: Background Processes
-
-```bash
-# Start backend
-cd merchant-backend && python main.py &
-
-# Start frontend
-cd merchant-frontend && npm start &
-
-# Start CDN proxy
-cd cdn-proxy && node server.js &
-
-# Start agent registry
-cd agent-registry && python main.py &
-```
-
----
 
 ## Access the Gallery
 
@@ -108,66 +65,7 @@ Dark:      #8B4513 (Saddle Brown)
 - **Limited Editions** - Collector's items
 - **And more!** - 15 unique products total
 
----
-
-## 🛍️ Test Shopping Flow
-
-### Manual Shopping
-
-1. Visit http://localhost:3000
-2. Browse the gallery
-3. Click on any art piece
-4. Add to cart
-5. Proceed to checkout
-6. Complete purchase
-
-### Automated Shopping (with Agent)
-
-1. Visit http://localhost:8501
-2. Configure product URL: `http://localhost:3001/product/1`
-3. Fill checkout information
-4. Click "🤖 Start Automated Shopping"
-5. Watch the magic! ✨
-
-The agent will:
-- Navigate to product page
-- Extract product details
-- Add to cart
-- Fill checkout form
-- Complete purchase
-- Extract order number
-
----
-
-## 📦 Sample Products
-
-### Daily Drawing #1 - Morning Coffee
-- **Price:** $45.00
-- **Category:** Illustrations
-- **Stock:** 15 available
-
-### Daily Drawing #5 - Abstract Thoughts
-- **Price:** $65.00
-- **Category:** Abstract Art
-- **Stock:** 10 available
-
-### Limited Edition Print Set
-- **Price:** $225.00
-- **Category:** Limited Edition
-- **Stock:** 5 available (exclusive!)
-
----
-
-## 🎨 Features
-
-### Gallery Features
-✅ Beautiful art-focused design  
-✅ Sienna and beige-pink theme  
-✅ Rounded, elegant cards  
-✅ Smooth hover effects  
-✅ Instagram integration  
-✅ Category badges  
-✅ Stock indicators  
+---  
 
 ### Agent Features
 ✅ Complete automation  
@@ -204,18 +102,6 @@ cd tap-agent
 cat .env
 # Should have ED25519_PRIVATE_KEY and ED25519_PUBLIC_KEY
 ```
-
-### Port Already in Use?
-
-Check what's running:
-```bash
-lsof -i :3000  # Frontend
-lsof -i :8000  # Backend
-lsof -i :3001  # CDN Proxy
-lsof -i :9002  # Agent Registry
-lsof -i :8501  # TAP Agent
-```
-
 ---
 
 ## 🌐 URLs Reference
@@ -231,23 +117,6 @@ lsof -i :8501  # TAP Agent
 ---
 
 ## 🎯 Next Steps
-
-### Customize Your Gallery
-
-1. **Add Your Own Art**
-   - Edit `merchant-backend/seed_shanni_art.py`
-   - Add your product data
-   - Run the seed script
-
-2. **Change Colors**
-   - Find/replace `#A0522D` (sienna)
-   - Find/replace `#FFE4E1` (pink)
-   - Update in all frontend files
-
-3. **Update Branding**
-   - Change logo in `Header.jsx`
-   - Update footer in `App.jsx`
-   - Modify hero in `ProductsPage.jsx`
 
 ### Test Agent Automation
 
