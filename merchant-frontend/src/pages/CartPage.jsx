@@ -34,12 +34,13 @@ const CartPage = () => {
       <div style={styles.container}>
         <h1 style={styles.title}>Your Cart</h1>
         <div style={styles.emptyCart}>
-          <p>Your cart is empty</p>
+          <h2>🍌 Your cart is empty 🌸</h2>
+          <p>Add some amazing art pieces to your collection!</p>
           <button 
             onClick={() => navigate('/')}
             style={styles.shopButton}
           >
-            Continue Shopping
+            🌸 Start Shopping 🍌
           </button>
         </div>
       </div>
@@ -110,7 +111,7 @@ const CartPage = () => {
               onClick={handleProceedToCheckout}
               style={styles.checkoutButton}
             >
-              Proceed to Checkout
+              🍌 Proceed to Checkout 🛒
             </button>
           </div>
         </div>

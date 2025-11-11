@@ -16,16 +16,23 @@ const Header = () => {
 
   return (
     <header style={styles.header}>
+      <div style={styles.emojiDecor}>
+        <span style={styles.floatingEmoji}>🍌</span>
+        <span style={{...styles.floatingEmoji, animationDelay: '0.5s'}}>🌸</span>
+        <span style={{...styles.floatingEmoji, animationDelay: '1s'}}>🍌</span>
+        <span style={{...styles.floatingEmoji, animationDelay: '1.5s'}}>🌸</span>
+        <span style={{...styles.floatingEmoji, animationDelay: '2s'}}>🍌</span>
+      </div>
       <div style={styles.container}>
         <Link to="/" style={styles.logo}>
-          🎨 🐵 Shanni x MonkeDAO
+          🍌 🎨 🐵 Shanni x MonkeDAO 🌸
         </Link>
         
         <nav style={styles.nav}>
-          <Link to="/" style={styles.navLink}>Products</Link>
-          <Link to="/orders" style={styles.navLink}>Orders</Link>
+          <Link to="/" style={styles.navLink}>🌸 Products</Link>
+          <Link to="/orders" style={styles.navLink}>📦 Orders</Link>
           <Link to="/cart" style={styles.cartLink}>
-            🛒 Cart ({getCartItemCount()})
+            🍌 Cart ({getCartItemCount()}) 🛒
           </Link>
         </nav>
       </div>
@@ -43,6 +50,23 @@ const styles = {
     top: 0,
     zIndex: 1000,
     backdropFilter: 'blur(10px)',
+    overflow: 'hidden',
+  },
+  emojiDecor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+    opacity: 0.15,
+  },
+  floatingEmoji: {
+    position: 'absolute',
+    fontSize: '2rem',
+    animation: 'float 3s ease-in-out infinite',
+    top: '50%',
+    transform: 'translateY(-50%)',
   },
   container: {
     maxWidth: '1200px',
@@ -61,6 +85,8 @@ const styles = {
     letterSpacing: '-0.5px',
     textShadow: '3px 3px 0px rgba(255,182,193,0.5), 6px 6px 0px rgba(134,201,148,0.3)',
     transition: 'all 0.3s ease',
+    position: 'relative',
+    zIndex: 1,
   },
   nav: {
     display: 'flex',

@@ -560,7 +560,7 @@ const CheckoutPage = () => {
                 disabled={loading}
                 style={styles.submitButton}
               >
-                {loading ? 'Processing...' : `Complete Order - $${total.toFixed(2)}`}
+                {loading ? '⏳ Processing...' : `🍌 Complete Order - $${total.toFixed(2)} 🌸`}
               </button>
             </form>
           </div>

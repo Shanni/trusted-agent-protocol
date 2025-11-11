@@ -7,3 +7,5 @@ python-multipart>=0.0.18
 python-jose[cryptography]>=3.4.0
 passlib[bcrypt]==1.7.4
 cryptography>=43.0.1
+solana>=0.30.0
+requests>=2.31.0

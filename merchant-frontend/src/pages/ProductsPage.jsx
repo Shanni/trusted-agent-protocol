@@ -75,12 +75,21 @@ const ProductsPage = () => {
     <div style={styles.container}>
       <div style={styles.hero}>
         <div style={styles.heroBackground}></div>
+        <div style={styles.heroEmojis}>
+          <span style={styles.heroEmoji}>🍌</span>
+          <span style={{...styles.heroEmoji, top: '20%', left: '15%', animationDelay: '0.5s'}}>🌸</span>
+          <span style={{...styles.heroEmoji, top: '70%', left: '10%', animationDelay: '1s'}}>🍌</span>
+          <span style={{...styles.heroEmoji, top: '30%', right: '10%', animationDelay: '1.5s'}}>🌸</span>
+          <span style={{...styles.heroEmoji, top: '80%', right: '15%', animationDelay: '2s'}}>🍌</span>
+          <span style={{...styles.heroEmoji, top: '50%', left: '5%', animationDelay: '2.5s'}}>🌸</span>
+          <span style={{...styles.heroEmoji, top: '60%', right: '5%', animationDelay: '3s'}}>🐵</span>
+        </div>
         <div style={styles.heroContent}>
-          <h1 style={styles.title}>🎨 🐵 Shanni x MonkeDAO</h1>
-          <p style={styles.subtitle}>Discover unique illustrations and art pieces</p>
+          <h1 style={styles.title}>🍌 🎨 🐵 Shanni x MonkeDAO 🌸</h1>
+          <p style={styles.subtitle}>🌸 Discover unique illustrations and art pieces 🍌</p>
           <div style={styles.paymentOptions}>
-            <span style={styles.paymentBadge}>💳 Visa</span>
-            <span style={styles.paymentBadge}>🔗 USDC</span>
+            <span style={styles.paymentBadge}>💳 Visa Card</span>
+            <span style={styles.paymentBadge}>🔗 USDC Onchain</span>
           </div>
         </div>
       </div>
@@ -131,6 +140,22 @@ const styles = {
     background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)',
     pointerEvents: 'none',
   },
+  heroEmojis: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  heroEmoji: {
+    position: 'absolute',
+    fontSize: '3rem',
+    opacity: 0.3,
+    animation: 'bounce 2s ease-in-out infinite',
+    top: '10%',
+    left: '20%',
+  },
   heroContent: {
     position: 'relative',
     zIndex: 1,
@@ -143,7 +168,8 @@ const styles = {
     fontWeight: '900',
     textShadow: '4px 4px 0px rgba(24,70,35,0.3), 8px 8px 0px rgba(0,0,0,0.1)',
     letterSpacing: '-1px',
-    transform: 'rotate(-2deg)',
+    transform: 'rotate(-1deg)',
+    lineHeight: '1.1',
   },
   subtitle: {
     fontSize: '1.5rem',

@@ -17,7 +17,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request, Response
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import create_tables
-from app.routes import products, cart, orders, auth, onchain_payment
+from app.routes import products, cart, orders, auth, onchain_payment, sienna_payment
 
 # Configure logging
 logging.basicConfig(
@@ -65,6 +65,7 @@ app.include_router(cart.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(onchain_payment.router)
+app.include_router(sienna_payment.router)
 
 @app.on_event("startup")
 def startup_event():

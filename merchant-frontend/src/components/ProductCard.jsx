@@ -51,13 +51,13 @@ const ProductCard = ({ product }) => {
           <span style={styles.stock}>Stock: {product.stock_quantity}</span>
         </div>
         <div style={styles.footer}>
-          <span style={styles.price}>${product.price.toFixed(2)}</span>
+          <span style={styles.price}>🍌 ${product.price.toFixed(2)}</span>
           <button 
-            style={styles.addButton}
             onClick={handleAddToCart}
             disabled={product.stock_quantity === 0}
+            style={styles.addButton}
           >
-            {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+            {product.stock_quantity === 0 ? '😢 Out of Stock' : '🌸 Add to Cart'}
           </button>
         </div>
       </div>

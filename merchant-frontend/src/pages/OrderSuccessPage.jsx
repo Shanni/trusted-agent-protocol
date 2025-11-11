@@ -35,10 +35,10 @@ const OrderSuccessPage = () => {
       <div style={styles.content}>
         {/* Success Header */}
         <div style={styles.successHeader}>
-          <div style={styles.checkmark}>✓</div>
-          <h1 style={styles.successTitle}>Order Confirmed!</h1>
+          <div style={styles.checkmark}>🍌</div>
+          <h1 style={styles.successTitle}>🌸 Order Confirmed! 🎉</h1>
           <p style={styles.successSubtitle}>
-            Thank you for your order. We'll send you shipping confirmation when your order ships.
+            Thank you for your order! We'll send you shipping confirmation when your order ships. 🐵
           </p>
         </div>
 
@@ -181,13 +181,13 @@ const OrderSuccessPage = () => {
             onClick={() => navigate('/')}
             style={styles.continueButton}
           >
-            Continue Shopping
+            🌸 Continue Shopping 🍌
           </button>
           <button 
             onClick={() => navigate('/orders')}
             style={styles.ordersButton}
           >
-            View All Orders
+            📦 View All Orders
           </button>
         </div>
 

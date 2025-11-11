@@ -40,10 +40,17 @@ function App() {
               </Routes>
             </main>
             <footer style={styles.footer}>
+              <div style={styles.footerEmojis}>
+                <span style={styles.footerEmoji}>🍌</span>
+                <span style={{...styles.footerEmoji, left: '20%', animationDelay: '0.5s'}}>🌸</span>
+                <span style={{...styles.footerEmoji, left: '40%', animationDelay: '1s'}}>🍌</span>
+                <span style={{...styles.footerEmoji, left: '60%', animationDelay: '1.5s'}}>🌸</span>
+                <span style={{...styles.footerEmoji, left: '80%', animationDelay: '2s'}}>🍌</span>
+              </div>
               <div style={styles.footerContent}>
-                <p style={styles.footerText}>🎨 Shanni Art</p>
+                <p style={styles.footerText}>🍌 🎨 Shanni Art 🌸</p>
                 <p style={styles.footerSubtext}>Unique illustrations & art pieces by <a href="https://www.instagram.com/shanni_daily_drawing/" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>@shanni_daily_drawing</a></p>
-                <p style={styles.footerCopy}>&copy; 2025 Shanni. All rights reserved.</p>
+                <p style={styles.footerCopy}>&copy; 2025 Shanni. All rights reserved. 🐵</p>
               </div>
             </footer>
           </div>
@@ -71,11 +78,27 @@ const styles = {
     position: 'relative',
     overflow: 'hidden',
   },
+  footerEmojis: {
+    position: 'absolute',
+    top: '20%',
+    left: 0,
+    right: 0,
+    pointerEvents: 'none',
+  },
+  footerEmoji: {
+    position: 'absolute',
+    fontSize: '2rem',
+    opacity: 0.2,
+    animation: 'float 3s ease-in-out infinite',
+    left: '10%',
+  },
   footerContent: {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: '0 1rem',
     textAlign: 'center',
+    position: 'relative',
+    zIndex: 1,
   },
   footerText: {
     fontSize: '2rem',

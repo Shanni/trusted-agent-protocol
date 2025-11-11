@@ -392,38 +392,81 @@ def checkout_cart(
             detail="Customer email and name are required"
         )
     
-    # Extract payment information - handle both frontend and MCP agent formats
-    payment_data = {
-        'card_number': checkout_data.get('card_number'),
-        'expiry_date': checkout_data.get('expiry_date'), 
-        'cvv': checkout_data.get('cvv'),
-        'name_on_card': checkout_data.get('name_on_card') or checkout_data.get('cardholder_name')
-    }
+    # Determine payment method
+    payment_method = checkout_data.get('payment_method', 'visa')
+    if isinstance(payment_method, dict):
+        payment_method = payment_method.get('type', 'visa')
     
-    # If no payment data provided (e.g., from MCP agent demo), use mock data
-    if not any([payment_data['card_number'], payment_data['expiry_date'], payment_data['cvv']]):
+    # Process payment based on method
+    payment_result = None
+    
+    if payment_method == 'visa' or payment_method == 'credit_card':
+        # Extract payment information - handle both frontend and MCP agent formats
         payment_data = {
-            'card_number': '4111111111111111',  # Demo Visa card
-            'expiry_date': '12/25',
-            'cvv': '123',
-            'name_on_card': checkout_data.get('customer_name', 'Demo Customer')
+            'card_number': checkout_data.get('card_number'),
+            'expiry_date': checkout_data.get('expiry_date'), 
+            'cvv': checkout_data.get('cvv'),
+            'name_on_card': checkout_data.get('name_on_card') or checkout_data.get('cardholder_name')
         }
-
+        
+        # If no payment data provided (e.g., from MCP agent demo), use mock data
+        if not any([payment_data['card_number'], payment_data['expiry_date'], payment_data['cvv']]):
+            payment_data = {
+                'card_number': '4111111111111111',  # Demo Visa card
+                'expiry_date': '12/25',
+                'cvv': '123',
+                'name_on_card': checkout_data.get('customer_name', 'Demo Customer')
+            }
+        
+        # Validate payment information is provided
+        if not all([payment_data['card_number'], payment_data['expiry_date'], payment_data['cvv']]):
+            raise HTTPException(
+                status_code=400,
+                detail="Complete payment information is required (card number, expiry date, CVV)"
+            )
+        
+        # Process payment
+        payment_result = process_payment(payment_data, total_amount)
+        
+        if not payment_result['success']:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment failed: {payment_result['error']}"
+            )
     
-    # Validate payment information is provided
-    if not all([payment_data['card_number'], payment_data['expiry_date'], payment_data['cvv']]):
+    elif payment_method == 'cash':
+        # Cash on delivery - no payment processing needed
+        payment_result = {
+            "success": True,
+            "transaction_id": f"cash_{uuid.uuid4().hex[:12]}",
+            "card_brand": "Cash",
+            "last_four": "CASH"
+        }
+    
+    elif payment_method == 'x402':
+        # x402 onchain payment - verify payment signature
+        payment_signature = checkout_data.get('payment_signature')
+        payment_network = checkout_data.get('payment_network', 'devnet')
+        
+        if not payment_signature:
+            raise HTTPException(
+                status_code=400,
+                detail="Payment signature required for x402 payment"
+            )
+        
+        # In production, verify the transaction on-chain
+        # For now, accept the signature
+        payment_result = {
+            "success": True,
+            "transaction_id": payment_signature,
+            "card_brand": "x402 Solana",
+            "last_four": payment_signature[-4:] if payment_signature else "X402"
+        }
+    
+    else:
         raise HTTPException(
             status_code=400,
-            detail="Complete payment information is required (card number, expiry date, CVV)"
-        )
-    
-    # Process payment
-    payment_result = process_payment(payment_data, total_amount)
-    
-    if not payment_result['success']:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Payment failed: {payment_result['error']}"
+            detail=f"Unsupported payment method: {payment_method}"
         )
     
     # Handle shipping address - handle both string and object formats
