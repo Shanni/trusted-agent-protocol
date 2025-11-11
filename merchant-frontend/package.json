@@ -12,7 +12,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.20.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@solana/web3.js": "^1.87.6",
+    "@solana/spl-token": "^0.3.9"
   },
   "devDependencies": {
 

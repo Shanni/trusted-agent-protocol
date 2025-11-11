@@ -76,6 +76,10 @@ const ProductsPage = () => {
       <div style={styles.hero}>
         <h1 style={styles.title}>🎨 Shanni Art Gallery</h1>
         <p style={styles.subtitle}>Discover unique illustrations and art pieces</p>
+        <div style={styles.paymentOptions}>
+          <span style={styles.paymentBadge}>💳 Visa Card Accepted</span>
+          <span style={styles.paymentBadge}>🔗 Onchain Payment (USDC)</span>
+        </div>
       </div>
       
       <SearchFilters onSearch={handleSearch} onFilter={handleFilter} />
@@ -124,6 +128,26 @@ const styles = {
     fontSize: '1.2rem',
     color: '#8B4513',
     fontStyle: 'italic',
+    marginBottom: '1rem',
+  },
+  paymentOptions: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '1rem',
+    flexWrap: 'wrap',
+    marginTop: '1rem',
+  },
+  paymentBadge: {
+    backgroundColor: '#FFF5EE',
+    color: '#8B4513',
+    padding: '0.5rem 1rem',
+    borderRadius: '20px',
+    border: '2px solid #D2691E',
+    fontSize: '0.9rem',
+    fontWeight: 'bold',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
   },
   loading: {
     textAlign: 'center',

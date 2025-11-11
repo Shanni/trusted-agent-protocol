@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { ordersAPI } from '../services/api';
+import OnchainPayment from '../components/OnchainPayment';
 
 const CheckoutPage = () => {
   const { cart, sessionId, getCartTotal, clearCart } = useCart();
@@ -301,20 +302,15 @@ const CheckoutPage = () => {
                     style={styles.input}
                     required
                   />
-                  <select
+                  <input
+                    type="text"
                     name="state"
+                    placeholder="State *"
                     value={formData.state}
                     onChange={handleInputChange}
                     style={styles.input}
                     required
-                  >
-                    <option value="">State *</option>
-                    <option value="CA">California</option>
-                    <option value="NY">New York</option>
-                    <option value="TX">Texas</option>
-                    <option value="FL">Florida</option>
-                    {/* Add more states as needed */}
-                  </select>
+                  />
                   <input
                     type="text"
                     name="zipCode"
@@ -362,7 +358,17 @@ const CheckoutPage = () => {
                       checked={formData.paymentMethod === 'credit_card'}
                       onChange={handleInputChange}
                     />
-                    Credit Card
+                    Credit Card (Visa)
+                  </label>
+                  <label style={styles.radioLabel}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="onchain"
+                      checked={formData.paymentMethod === 'onchain'}
+                      onChange={handleInputChange}
+                    />
+                    Onchain Payment (USDC on Solana)
                   </label>
                 </div>
                 
@@ -403,6 +409,20 @@ const CheckoutPage = () => {
                       style={styles.input}
                     />
                   </div>
+                )}
+                
+                {formData.paymentMethod === 'onchain' && (
+                  <OnchainPayment
+                    amount={total}
+                    onPaymentComplete={(paymentInfo) => {
+                      // Handle successful onchain payment
+                      console.log('Onchain payment completed:', paymentInfo);
+                      // You can proceed with order creation here
+                    }}
+                    onError={(errorMsg) => {
+                      setError(errorMsg);
+                    }}
+                  />
                 )}
               </div>
 
@@ -476,26 +496,15 @@ const CheckoutPage = () => {
                         style={styles.input}
                         required={formData.billingDifferent}
                       />
-                      <select
+                      <input
+                        type="text"
                         name="billingState"
+                        placeholder="State *"
                         value={formData.billingState}
                         onChange={handleInputChange}
                         style={styles.input}
                         required={formData.billingDifferent}
-                      >
-                        <option value="">State *</option>
-                        <option value="CA">California</option>
-                        <option value="NY">New York</option>
-                        <option value="TX">Texas</option>
-                        <option value="FL">Florida</option>
-                        <option value="IL">Illinois</option>
-                        <option value="PA">Pennsylvania</option>
-                        <option value="OH">Ohio</option>
-                        <option value="GA">Georgia</option>
-                        <option value="NC">North Carolina</option>
-                        <option value="MI">Michigan</option>
-                        {/* Add more states as needed */}
-                      </select>
+                      />
                       <input
                         type="text"
                         name="billingZipCode"
