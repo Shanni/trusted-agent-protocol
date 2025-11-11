@@ -109,11 +109,12 @@ const SearchFilters = ({ onSearch, onFilter }) => {
 
 const styles = {
   container: {
-    backgroundColor: 'white',
-    padding: '1rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    background: 'white',
+    padding: '1.5rem',
+    borderRadius: '25px',
+    boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
     marginBottom: '2rem',
+    border: '3px solid rgba(255,105,180,0.2)',
   },
   searchForm: {
     display: 'flex',
@@ -128,13 +129,17 @@ const styles = {
     fontSize: '1rem',
   },
   searchButton: {
-    backgroundColor: '#3498db',
+    background: 'linear-gradient(135deg, #FF69B4 0%, #FFB6C1 100%)',
     color: 'white',
     border: 'none',
-    padding: '0.75rem 1.5rem',
-    borderRadius: '4px',
+    padding: '0.75rem 2rem',
+    borderRadius: '50px',
     cursor: 'pointer',
     fontSize: '1rem',
+    fontWeight: '800',
+    boxShadow: '0 6px 20px rgba(255,105,180,0.4)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   filters: {
     display: 'flex',
@@ -156,13 +161,15 @@ const styles = {
     width: '120px',
   },
   clearButton: {
-    backgroundColor: '#95a5a6',
+    background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
     color: 'white',
     border: 'none',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
+    padding: '0.5rem 1.2rem',
+    borderRadius: '50px',
     cursor: 'pointer',
     fontSize: '0.9rem',
+    fontWeight: '700',
+    boxShadow: '0 4px 15px rgba(74,143,93,0.3)',
   },
 };
 

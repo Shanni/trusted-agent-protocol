@@ -41,9 +41,9 @@ function App() {
             </main>
             <footer style={styles.footer}>
               <div style={styles.footerContent}>
-                <p style={styles.footerText}>🎨 TAP Shanni Art Gallery</p>
+                <p style={styles.footerText}>🎨 Shanni Art</p>
                 <p style={styles.footerSubtext}>Unique illustrations & art pieces by <a href="https://www.instagram.com/shanni_daily_drawing/" target="_blank" rel="noopener noreferrer" style={styles.footerLink}>@shanni_daily_drawing</a></p>
-                <p style={styles.footerCopy}>&copy; 2025 TAP Shanni Art. All rights reserved.</p>
+                <p style={styles.footerCopy}>&copy; 2025 Shanni. All rights reserved.</p>
               </div>
             </footer>
           </div>
@@ -56,7 +56,7 @@ function App() {
 const styles = {
   app: {
     minHeight: '100vh',
-    backgroundColor: '#FFF5EE',
+    background: 'linear-gradient(180deg, #FFF0F5 0%, #FFE4E8 50%, #F0F8F0 100%)',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -64,11 +64,12 @@ const styles = {
     flex: 1,
   },
   footer: {
-    backgroundColor: '#A0522D',
-    color: '#FFF5EE',
+    background: 'linear-gradient(135deg, #184623 0%, #2d5a3d 50%, #4A8F5D 100%)',
+    color: 'white',
     padding: '3rem 0',
     marginTop: '4rem',
-    borderTop: '3px solid #D2691E',
+    position: 'relative',
+    overflow: 'hidden',
   },
   footerContent: {
     maxWidth: '1200px',
@@ -77,24 +78,27 @@ const styles = {
     textAlign: 'center',
   },
   footerText: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
+    fontSize: '2rem',
+    fontWeight: '900',
     marginBottom: '0.5rem',
-    fontFamily: 'Georgia, serif',
+    fontFamily: '"Space Grotesk", -apple-system, sans-serif',
+    textShadow: '2px 2px 0px rgba(255,182,193,0.5)',
   },
   footerSubtext: {
-    fontSize: '1rem',
+    fontSize: '1.1rem',
     marginBottom: '1rem',
-    color: '#FFE4E1',
+    color: 'rgba(255,255,255,0.9)',
   },
   footerLink: {
-    color: '#FFE4E1',
-    textDecoration: 'underline',
+    color: '#FFB6C1',
+    textDecoration: 'none',
     fontWeight: 'bold',
+    borderBottom: '2px solid #FFB6C1',
+    transition: 'all 0.3s',
   },
   footerCopy: {
     fontSize: '0.9rem',
-    opacity: 0.8,
+    opacity: 0.9,
   },
 };
 

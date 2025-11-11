@@ -18,15 +18,14 @@ const Header = () => {
     <header style={styles.header}>
       <div style={styles.container}>
         <Link to="/" style={styles.logo}>
-          🎨 TAP Shanni Art
+          🎨 🐵 Shanni x MonkeDAO
         </Link>
         
         <nav style={styles.nav}>
           <Link to="/" style={styles.navLink}>Products</Link>
           <Link to="/orders" style={styles.navLink}>Orders</Link>
-          <Link to="/signature-demo" style={styles.navLink}>Demo</Link>
           <Link to="/cart" style={styles.cartLink}>
-            Cart ({getCartItemCount()})
+            🛒 Cart ({getCartItemCount()})
           </Link>
         </nav>
       </div>
@@ -36,11 +35,14 @@ const Header = () => {
 
 const styles = {
   header: {
-    backgroundColor: '#A0522D',
-    color: '#FFF5EE',
-    padding: '1rem 0',
-    boxShadow: '0 2px 4px rgba(160,82,45,0.3)',
-    borderBottom: '3px solid #D2691E',
+    background: 'linear-gradient(135deg, #184623 0%, #4A8F5D 100%)',
+    color: 'white',
+    padding: '1.5rem 0',
+    boxShadow: '0 8px 32px rgba(24,70,35,0.4)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)',
   },
   container: {
     maxWidth: '1200px',
@@ -51,12 +53,14 @@ const styles = {
     alignItems: 'center',
   },
   logo: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    color: '#FFF5EE',
+    fontSize: '1.8rem',
+    fontWeight: '900',
+    color: 'white',
     textDecoration: 'none',
-    fontFamily: 'Georgia, serif',
-    letterSpacing: '0.5px',
+    fontFamily: '"Space Grotesk", -apple-system, sans-serif',
+    letterSpacing: '-0.5px',
+    textShadow: '3px 3px 0px rgba(255,182,193,0.5), 6px 6px 0px rgba(134,201,148,0.3)',
+    transition: 'all 0.3s ease',
   },
   nav: {
     display: 'flex',
@@ -64,24 +68,34 @@ const styles = {
     alignItems: 'center',
   },
   navLink: {
-    color: '#FFF5EE',
+    color: 'white',
     textDecoration: 'none',
-    padding: '0.5rem 1rem',
-    borderRadius: '20px',
+    padding: '0.6rem 1.2rem',
+    borderRadius: '12px',
     transition: 'all 0.3s',
+    fontWeight: '600',
+    fontSize: '1rem',
+    position: 'relative',
     ':hover': {
-      backgroundColor: '#8B4513',
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      transform: 'translateY(-2px)',
     },
   },
   cartLink: {
-    color: '#8B4513',
+    color: 'white',
     textDecoration: 'none',
-    padding: '0.5rem 1.5rem',
-    backgroundColor: '#FFE4E1',
-    borderRadius: '20px',
-    fontWeight: 'bold',
-    border: '2px solid #D2691E',
+    padding: '0.7rem 1.8rem',
+    background: 'linear-gradient(135deg, #FF69B4 0%, #FFB6C1 100%)',
+    borderRadius: '30px',
+    fontWeight: '800',
+    fontSize: '1.1rem',
     transition: 'all 0.3s',
+    boxShadow: '0 4px 15px rgba(255,105,180,0.4), inset 0 -2px 0 rgba(0,0,0,0.1)',
+    transform: 'rotate(-2deg)',
+    ':hover': {
+      transform: 'rotate(0deg) scale(1.05)',
+      boxShadow: '0 6px 20px rgba(255,105,180,0.6)',
+    },
   },
 };
 

@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { ordersAPI } from '../services/api';
-import OnchainPayment from '../components/OnchainPayment';
+import OnchainPaymentAgent from '../components/OnchainPaymentAgent';
 
 const CheckoutPage = () => {
   const { cart, sessionId, getCartTotal, clearCart } = useCart();
@@ -412,8 +412,20 @@ const CheckoutPage = () => {
                 )}
                 
                 {formData.paymentMethod === 'onchain' && (
-                  <OnchainPayment
+                  <OnchainPaymentAgent
                     amount={total}
+                    orderData={{
+                      customerEmail: formData.email,
+                      customerName: `${formData.firstName} ${formData.lastName}`,
+                      shippingAddress: {
+                        street: formData.address1,
+                        city: formData.city,
+                        state: formData.state,
+                        zipCode: formData.zipCode,
+                        country: formData.country
+                      },
+                      items: cart.items
+                    }}
                     onPaymentComplete={(paymentInfo) => {
                       // Handle successful onchain payment
                       console.log('Onchain payment completed:', paymentInfo);
@@ -608,7 +620,7 @@ const CheckoutPage = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF0F5',
   },
   content: {
     maxWidth: '1200px',
@@ -619,18 +631,21 @@ const styles = {
     marginBottom: '2rem',
   },
   backButton: {
-    backgroundColor: 'transparent',
-    border: '1px solid #ddd',
+    background: 'linear-gradient(135deg, #90C6EA 0%, #2F8DCC 100%)',
+    border: '2px solid #FFC919',
     padding: '0.5rem 1rem',
-    borderRadius: '4px',
+    borderRadius: '20px',
     cursor: 'pointer',
     marginBottom: '1rem',
-    color: '#666',
+    color: 'white',
+    fontWeight: 'bold',
   },
   title: {
     fontSize: '2rem',
-    color: '#2c3e50',
+    color: '#184623',
     margin: 0,
+    fontFamily: '"Space Grotesk", -apple-system, sans-serif',
+    fontWeight: 'bold',
   },
   mainContent: {
     display: 'grid',
@@ -638,20 +653,22 @@ const styles = {
     gap: '3rem',
   },
   formSection: {
-    backgroundColor: 'white',
+    background: 'linear-gradient(to bottom, #FFF0F5 0%, #FFB6C1 100%)',
     padding: '2rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    borderRadius: '25px',
+    boxShadow: '0 6px 16px rgba(24,70,35,0.15)',
+    border: '4px solid #FFC919',
   },
   section: {
     marginBottom: '2rem',
   },
   sectionTitle: {
     fontSize: '1.3rem',
-    color: '#2c3e50',
+    color: '#184623',
     marginBottom: '1rem',
-    borderBottom: '1px solid #eee',
+    borderBottom: '2px solid #FFC919',
     paddingBottom: '0.5rem',
+    fontWeight: 'bold',
   },
   row: {
     display: 'grid',
@@ -721,24 +738,26 @@ const styles = {
     marginTop: '1rem',
   },
   error: {
-    backgroundColor: '#fdf2f2',
-    color: '#e74c3c',
+    backgroundColor: '#FFE4E4',
+    color: '#FF6B6B',
     padding: '1rem',
-    borderRadius: '4px',
-    border: '1px solid #fecaca',
+    borderRadius: '20px',
+    border: '2px solid #FFB6C1',
     marginBottom: '1rem',
+    fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#27ae60',
-    color: 'white',
-    border: 'none',
+    background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
+    color: '#F3EFCD',
+    border: '3px solid #FFC919',
     padding: '1rem 2rem',
-    borderRadius: '4px',
+    borderRadius: '25px',
     cursor: 'pointer',
     fontSize: '1.1rem',
     fontWeight: 'bold',
     width: '100%',
     marginTop: '1rem',
+    boxShadow: '0 4px 12px rgba(24,70,35,0.3)',
   },
   summarySection: {
     height: 'fit-content',
@@ -746,17 +765,19 @@ const styles = {
     top: '2rem',
   },
   orderSummary: {
-    backgroundColor: 'white',
+    background: 'linear-gradient(to bottom, #FFF0F5 0%, #FFB6C1 100%)',
     padding: '1.5rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    borderRadius: '25px',
+    boxShadow: '0 6px 16px rgba(24,70,35,0.15)',
+    border: '4px solid #FFC919',
   },
   summaryTitle: {
     fontSize: '1.3rem',
-    color: '#2c3e50',
+    color: '#184623',
     marginBottom: '1rem',
-    borderBottom: '1px solid #eee',
+    borderBottom: '2px solid #FFC919',
     paddingBottom: '0.5rem',
+    fontWeight: 'bold',
   },
   cartItems: {
     marginBottom: '1.5rem',
@@ -779,18 +800,18 @@ const styles = {
   },
   itemName: {
     fontSize: '0.9rem',
-    fontWeight: '500',
-    color: '#2c3e50',
+    fontWeight: '600',
+    color: '#184623',
     marginBottom: '0.25rem',
   },
   itemQuantity: {
     fontSize: '0.8rem',
-    color: '#666',
+    color: '#4A8F5D',
   },
   itemPrice: {
     fontSize: '0.9rem',
     fontWeight: 'bold',
-    color: '#e74c3c',
+    color: '#184623',
   },
   totals: {
     borderTop: '1px solid #eee',
@@ -808,8 +829,8 @@ const styles = {
     justifyContent: 'space-between',
     fontSize: '1.2rem',
     fontWeight: 'bold',
-    color: '#2c3e50',
-    borderTop: '1px solid #eee',
+    color: '#184623',
+    borderTop: '2px solid #FFC919',
     paddingTop: '0.5rem',
     marginTop: '0.5rem',
   },
