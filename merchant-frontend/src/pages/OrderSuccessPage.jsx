@@ -67,7 +67,11 @@ const OrderSuccessPage = () => {
               <div style={styles.infoGrid}>
                 <div>
                   <p style={styles.label}>Payment Method</p>
-                  <p style={styles.value}>{payment.card_brand} ending in {payment.last_four}</p>
+                  <p style={styles.value}>
+                    {payment.card_brand === 'x402 Solana' || payment.paymentMethod === 'onchain' 
+                      ? 'x402 by Project Sienna' 
+                      : `${payment.card_brand} ending in ${payment.last_four}`}
+                  </p>
                 </div>
                 <div>
                   <p style={styles.label}>Payment Status</p>
@@ -76,7 +80,21 @@ const OrderSuccessPage = () => {
                 {payment.transaction_id && (
                   <div>
                     <p style={styles.label}>Transaction ID</p>
-                    <p style={styles.value}>{payment.transaction_id}</p>
+                    {payment.explorerUrl ? (
+                      <a 
+                        href={payment.explorerUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={styles.explorerLink}
+                      >
+                        {payment.transaction_id.length > 20 
+                          ? `${payment.transaction_id.slice(0, 8)}...${payment.transaction_id.slice(-8)}` 
+                          : payment.transaction_id}
+                        {' '}↗
+                      </a>
+                    ) : (
+                      <p style={styles.value}>{payment.transaction_id}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -196,20 +214,15 @@ const OrderSuccessPage = () => {
           <div style={styles.infoCard}>
             <h4 style={styles.infoTitle}>What's Next?</h4>
             <ul style={styles.infoList}>
-              <li>You'll receive an email confirmation shortly</li>
-              <li>We'll notify you when your order ships</li>
+              <li>Email confirmation sent</li>
               <li>Estimated delivery: 5-7 business days</li>
-              <li>Track your order anytime in your order history</li>
             </ul>
           </div>
           
           <div style={styles.infoCard}>
             <h4 style={styles.infoTitle}>Need Help?</h4>
             <ul style={styles.infoList}>
-              <li>Contact customer support: support@example.com</li>
-              <li>Call us: 1-800-MERCHANT</li>
-              <li>View our return policy</li>
-              <li>FAQ and help center</li>
+              <li>Contact: <a href="mailto:contact@projectsienna.xyz" style={styles.emailLink}>contact@projectsienna.xyz</a></li>
             </ul>
           </div>
         </div>
@@ -238,15 +251,15 @@ const styles = {
     height: '80px',
     borderRadius: '50%',
     background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
-    color: '#F3EFCD',
+    color: 'white',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '3rem',
     margin: '0 auto 2rem auto',
     fontWeight: 'bold',
-    border: '4px solid #FFC919',
-    boxShadow: '0 4px 12px rgba(24,70,35,0.3)',
+    border: '4px solid #86C994',
+    boxShadow: '0 4px 12px rgba(74,143,93,0.3)',
   },
   successTitle: {
     fontSize: '2.5rem',
@@ -262,11 +275,11 @@ const styles = {
     lineHeight: '1.5',
   },
   orderCard: {
-    background: 'linear-gradient(to bottom, #FFF0F5 0%, #FFB6C1 100%)',
-    borderRadius: '25px',
+    background: 'linear-gradient(to bottom, #FFFFFF 0%, #FFF5F8 100%)',
+    borderRadius: '20px',
     padding: '2rem',
-    boxShadow: '0 6px 16px rgba(24,70,35,0.15)',
-    border: '4px solid #FFC919',
+    boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+    border: '1px solid #E8E8E8',
     marginBottom: '2rem',
   },
   orderHeader: {
@@ -290,13 +303,13 @@ const styles = {
   },
   orderStatus: {
     background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
-    color: '#F3EFCD',
+    color: 'white',
     padding: '0.5rem 1rem',
     borderRadius: '20px',
     fontSize: '0.8rem',
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    border: '2px solid #FFC919',
+    border: '2px solid #86C994',
   },
   section: {
     marginBottom: '2rem',
@@ -411,22 +424,22 @@ const styles = {
   },
   continueButton: {
     background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
-    color: '#F3EFCD',
-    border: '3px solid #FFC919',
+    color: 'white',
+    border: 'none',
     padding: '1rem 2rem',
-    borderRadius: '25px',
+    borderRadius: '12px',
     cursor: 'pointer',
     fontSize: '1rem',
     fontWeight: 'bold',
     transition: 'all 0.3s',
-    boxShadow: '0 4px 12px rgba(24,70,35,0.3)',
+    boxShadow: '0 4px 12px rgba(74,143,93,0.3)',
   },
   ordersButton: {
     background: 'linear-gradient(135deg, #90C6EA 0%, #2F8DCC 100%)',
     color: 'white',
-    border: '3px solid #FFC919',
+    border: 'none',
     padding: '1rem 2rem',
-    borderRadius: '25px',
+    borderRadius: '12px',
     cursor: 'pointer',
     fontSize: '1rem',
     fontWeight: 'bold',
@@ -439,11 +452,11 @@ const styles = {
     gap: '2rem',
   },
   infoCard: {
-    background: 'linear-gradient(135deg, #FFB6C1 0%, #FFF0F5 100%)',
+    background: 'linear-gradient(to bottom, #FFFFFF 0%, #FFF5F8 100%)',
     padding: '1.5rem',
-    borderRadius: '20px',
-    boxShadow: '0 4px 12px rgba(24,70,35,0.15)',
-    border: '3px solid #FFC919',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    border: '1px solid #E8E8E8',
   },
   infoTitle: {
     fontSize: '1.1rem',
@@ -454,6 +467,20 @@ const styles = {
   infoList: {
     margin: 0,
     paddingLeft: '1.2rem',
+  },
+  explorerLink: {
+    color: '#3498db',
+    textDecoration: 'none',
+    fontWeight: '600',
+    fontSize: '0.95rem',
+    fontFamily: 'monospace',
+    display: 'inline-block',
+    marginTop: '0.25rem',
+  },
+  emailLink: {
+    color: '#3498db',
+    textDecoration: 'none',
+    fontWeight: '500',
   },
 };
 
