@@ -397,6 +397,11 @@ def checkout_cart(
     if isinstance(payment_method, dict):
         payment_method = payment_method.get('type', 'visa')
     
+    # Normalize payment method - handle frontend aliases
+    # 'onchain' and 'solana' are frontend aliases for 'x402'
+    if payment_method in ['onchain', 'solana', 'solana_usdc']:
+        payment_method = 'x402'
+    
     # Process payment based on method
     payment_result = None
     

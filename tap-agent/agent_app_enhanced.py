@@ -1,4 +1,4 @@
-# © 2025 Visa.
+# © 2025 Shanni.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 #
@@ -206,6 +206,14 @@ def perform_api_checkout(session_id: str, checkout_data: dict, payment_method: s
     try:
         api_base = os.getenv('MERCHANT_API_URL', 'http://localhost:8000')
         
+        print(f"\n{'='*60}")
+        print(f"🔧 API CHECKOUT DEBUG INFO")
+        print(f"{'='*60}")
+        print(f"📍 API Base URL: {api_base}")
+        print(f"🆔 Session ID: {session_id}")
+        print(f"💳 Payment Method: {payment_method}")
+        print(f"📦 Checkout Data Keys: {list(checkout_data.keys())}")
+        
         checkout_payload = {
             "customer_name": checkout_data.get('customer_name', 'Agent Customer'),
             "customer_email": checkout_data.get('customer_email', 'agent@example.com'),
@@ -218,6 +226,7 @@ def perform_api_checkout(session_id: str, checkout_data: dict, payment_method: s
         
         # Add payment-specific fields
         if payment_method == 'visa':
+            print(f"💳 Adding Visa card payment fields")
             checkout_payload.update({
                 "card_number": checkout_data.get('card_number', '4111111111111111'),
                 "expiry_date": checkout_data.get('expiry_date', '12/25'),
@@ -225,21 +234,33 @@ def perform_api_checkout(session_id: str, checkout_data: dict, payment_method: s
                 "name_on_card": checkout_data.get('name_on_card', checkout_data.get('customer_name', 'Agent Customer'))
             })
         elif payment_method == 'x402':
+            print(f"🔗 Processing x402 onchain payment")
             amount = checkout_data.get('total_amount', 10.0)
             recipient_wallet = os.getenv('SOLANA_RECIPIENT_WALLET', 'MERCHANT_WALLET_ADDRESS')
             network = os.getenv('SOLANA_CLUSTER', 'devnet')
             
+            print(f"   Amount: {amount} USDC")
+            print(f"   Recipient: {recipient_wallet}")
+            print(f"   Network: {network}")
+            
             payment_result = perform_x402_payment(amount, recipient_wallet, network)
             
             if payment_result['success']:
+                print(f"✅ x402 payment completed! Signature: {payment_result['signature']}")
                 st.success(f"✅ x402 payment completed! Signature: {payment_result['signature']}")
                 checkout_payload.update({
                     'payment_signature': payment_result['signature'],
                     'payment_network': payment_result['network'],
                     'payment_explorer_url': payment_result['explorerUrl']
                 })
+            else:
+                print(f"❌ x402 payment failed: {payment_result.get('error', 'Unknown error')}")
         
         checkout_url = f"{api_base}/api/orders/checkout/{session_id}"
+        
+        print(f"\n📤 Making POST request to: {checkout_url}")
+        print(f"📋 Payload keys: {list(checkout_payload.keys())}")
+        print(f"🔐 Headers: {list(headers.keys())}")
         
         response = requests.post(
             checkout_url,
@@ -248,9 +269,16 @@ def perform_api_checkout(session_id: str, checkout_data: dict, payment_method: s
             timeout=30
         )
         
+        print(f"\n📥 Response Status: {response.status_code}")
+        print(f"📥 Response Headers: {dict(response.headers)}")
+        
         if response.status_code == 200:
             result = response.json()
             order_number = result.get('order', {}).get('order_number', 'Unknown')
+            
+            print(f"✅ Checkout successful!")
+            print(f"📦 Order Number: {order_number}")
+            print(f"📄 Response keys: {list(result.keys())}")
             
             return {
                 "success": True,
@@ -258,18 +286,27 @@ def perform_api_checkout(session_id: str, checkout_data: dict, payment_method: s
                 "response": result
             }
         else:
+            error_text = response.text[:500] if response.text else "No response body"
+            print(f"❌ Checkout failed with status {response.status_code}")
+            print(f"📄 Response body: {error_text}")
+            
             return {
                 "success": False,
-                "error": f"Checkout failed: {response.status_code}"
+                "error": f"Checkout failed: {response.status_code}",
+                "response_body": error_text
             }
             
     except Exception as e:
+        print(f"❌ Exception in perform_api_checkout: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"📋 Traceback:\n{traceback.format_exc()}")
+        
         return {
             "success": False,
             "error": str(e)
         }
 
-def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, payment_method: str):
+def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, payment_method: str, network: str = "devnet"):
     """Run complete shopping flow: view product → add to cart → checkout (like v3)"""
     st.info("🔄 Initializing shopping flow...")
     print("\n" + "="*60)
@@ -422,20 +459,69 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
                 cart_url = f"{parsed.scheme}://{parsed.netloc}/cart"
                 
                 add_step("Navigate to Cart", "🔄", f"Going to {cart_url}")
+                print(f"\n🛒 Navigating to cart: {cart_url}")
                 page.goto(cart_url, wait_until='domcontentloaded', timeout=30000)
                 time.sleep(2)
                 add_step("Navigate to Cart", "✅", "Cart page loaded")
                 
-                # Extract cart info
+                # Extract cart info and session ID
+                print(f"\n{'='*60}")
+                print(f"🛒 CART PAGE INFO")
+                print(f"{'='*60}")
+                print(f"📍 Current URL: {page.url}")
+                
+                try:
+                    # Try to extract session ID from cart page
+                    cart_session = page.evaluate("() => localStorage.getItem('cartSessionId')")
+                    print(f"🆔 Cart Session ID: {cart_session}")
+                except Exception as e:
+                    print(f"⚠️ Could not get cart session ID: {e}")
+                
                 try:
                     cart_items = page.query_selector_all('.cart-item, [data-testid="cart-item"]')
+                    
+                    # Extract detailed cart information
+                    items_list = []
+                    for item in cart_items:
+                        try:
+                            item_data = {}
+                            # Try to extract item name
+                            name_elem = item.query_selector('.item-name, .product-name, h3, h4')
+                            if name_elem:
+                                item_data['name'] = name_elem.inner_text().strip()
+                            
+                            # Try to extract price
+                            price_elem = item.query_selector('.item-price, .price, [class*="price"]')
+                            if price_elem:
+                                item_data['price'] = price_elem.inner_text().strip()
+                            
+                            # Try to extract quantity
+                            qty_elem = item.query_selector('.quantity, input[type="number"]')
+                            if qty_elem:
+                                qty_text = qty_elem.inner_text().strip() if qty_elem.inner_text() else qty_elem.get_attribute('value')
+                                item_data['quantity'] = qty_text
+                            
+                            if item_data:  # Only add if we extracted something
+                                items_list.append(item_data)
+                        except Exception as item_err:
+                            print(f"⚠️ Could not extract details for cart item: {item_err}")
+                            continue
+                    
                     _automation_results['cart_info'] = {
                         'item_count': len(cart_items),
-                        'items': []
+                        'items': items_list
                     }
-                    add_step("View Cart", "✅", f"Found {len(cart_items)} item(s) in cart")
-                except:
+                    print(f"📦 Cart items found: {len(cart_items)}")
+                    if items_list:
+                        print(f"📋 Extracted details for {len(items_list)} items")
+                        for idx, item in enumerate(items_list, 1):
+                            print(f"   Item {idx}: {item}")
+                    add_step("View Cart", "✅", f"Found {len(cart_items)} item(s) in cart with {len(items_list)} detailed")
+                except Exception as e:
+                    print(f"⚠️ Could not extract cart details: {e}")
                     add_step("View Cart", "⚠️", "Could not extract cart details")
+                
+                print(f"{'='*60}\n")
                 
                 # STEP 4: Proceed to Checkout
                 add_step("Proceed to Checkout", "🔄", "Looking for checkout button")
@@ -465,9 +551,25 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
                     # Try direct navigation
                     checkout_url = f"{parsed.scheme}://{parsed.netloc}/checkout"
                     add_step("Proceed to Checkout", "🔄", f"Direct navigation to {checkout_url}")
+                    print(f"\n🛒 Direct navigation to checkout: {checkout_url}")
                     page.goto(checkout_url, wait_until='domcontentloaded', timeout=30000)
                     time.sleep(2)
                     add_step("Proceed to Checkout", "✅", "Checkout page loaded")
+                
+                # Log checkout page info
+                print(f"\n{'='*60}")
+                print(f"📝 CHECKOUT PAGE INFO")
+                print(f"{'='*60}")
+                print(f"📍 Current URL: {page.url}")
+                print(f"📄 Page Title: {page.title()}")
+                
+                try:
+                    checkout_session = page.evaluate("() => localStorage.getItem('cartSessionId')")
+                    print(f"🆔 Checkout Session ID: {checkout_session}")
+                except Exception as e:
+                    print(f"⚠️ Could not get checkout session ID: {e}")
+                
+                print(f"{'='*60}\n")
                 
                 # STEP 5: Fill Checkout Form
                 add_step("Fill Checkout Form", "🔄", "Filling customer information")
@@ -516,15 +618,20 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
                 add_step("Select Payment Method", "🔄", f"Selecting {PAYMENT_METHODS[payment_method]['name']} on checkout page")
                 time.sleep(1)
                 
+                # Map x402 to 'onchain' for frontend compatibility
+                frontend_payment_value = 'onchain' if payment_method == 'x402' else payment_method
+                
                 # Try to find and select payment method radio button or dropdown
                 payment_selected = False
                 
                 # Method 1: Radio buttons with labels
                 payment_selectors = [
-                    f'input[value="{payment_method}"]',
-                    f'input[name="paymentMethod"][value="{payment_method}"]',
-                    f'[data-payment-method="{payment_method}"]',
+                    f'input[value="{frontend_payment_value}"]',
+                    f'input[name="paymentMethod"][value="{frontend_payment_value}"]',
+                    f'[data-payment-method="{frontend_payment_value}"]',
                     f'label:has-text("{PAYMENT_METHODS[payment_method]['name']}")',
+                    'input[value="onchain"]',  # Explicit fallback for onchain
+                    'input[name="paymentMethod"][value="onchain"]',
                 ]
                 
                 for selector in payment_selectors:
@@ -583,52 +690,151 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
                 if not payment_button_clicked:
                     add_step("Click Payment Button", "⚠️", "No payment button found, using direct API")
                 
-                # STEP 7: Submit Order via API
-                add_step("Submit Order", "🔄", f"Calling API with {PAYMENT_METHODS[payment_method]['name']}")
+                # Initialize order_submitted flag
+                order_submitted = False
                 
-                # Extract session ID (simplified - in production, extract from cookies/page)
-                session_id = "demo-session-" + uuid.uuid4().hex[:8]
-                
-                api_result = perform_api_checkout(session_id, checkout_data, payment_method, headers)
-                
-                if api_result["success"]:
-                    add_step("Submit Order", "✅", f"Order submitted via API. Order Number: {api_result['order_number']}")
-                    order_submitted = True
+                # STEP 7: Submit Order via API (only for non-x402 payments)
+                if payment_method != 'x402':
+                    add_step("Submit Order", "🔄", f"Calling API with {PAYMENT_METHODS[payment_method]['name']}")
                     
-                    # Update results with API-extracted order number
-                    _automation_results['order_info'] = {
-                        'order_number': api_result['order_number'],
-                        'success_url': page.url,
-                        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
-                        'source': 'api_checkout',
-                        'payment_method': payment_method
-                    }
+                    # Extract session ID from cookies or localStorage
+                    print(f"\n{'='*60}")
+                    print(f"🔍 EXTRACTING SESSION ID")
+                    print(f"{'='*60}")
                     
-                    add_step("Order Confirmation", "✅", f"Order Number: {api_result['order_number']}")
+                    session_id = None
+                    try:
+                        # Try to get session ID from localStorage
+                        session_id = page.evaluate("() => localStorage.getItem('cartSessionId')")
+                        print(f"📦 Session ID from localStorage: {session_id}")
+                    except Exception as e:
+                        print(f"⚠️ Could not get session ID from localStorage: {e}")
+                    
+                    if not session_id:
+                        try:
+                            # Try to get from cookies
+                            cookies = context.cookies()
+                            for cookie in cookies:
+                                if 'session' in cookie['name'].lower():
+                                    session_id = cookie['value']
+                                    print(f"🍪 Session ID from cookie '{cookie['name']}': {session_id}")
+                                    break
+                        except Exception as e:
+                            print(f"⚠️ Could not get session ID from cookies: {e}")
+                    
+                    if not session_id:
+                        # Fallback to demo session
+                        session_id = "demo-session-" + uuid.uuid4().hex[:8]
+                        print(f"⚠️ Using generated session ID: {session_id}")
+                    else:
+                        print(f"✅ Using extracted session ID: {session_id}")
+                    
+                    print(f"{'='*60}\n")
+                    
+                    api_result = perform_api_checkout(session_id, checkout_data, payment_method, headers)
+                    
+                    if api_result["success"]:
+                        add_step("Submit Order", "✅", f"Order submitted via API. Order Number: {api_result['order_number']}")
+                        order_submitted = True
+                        
+                        # Update results with API-extracted order number
+                        _automation_results['order_info'] = {
+                            'order_number': api_result['order_number'],
+                            'success_url': page.url,
+                            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+                            'source': 'api_checkout',
+                            'payment_method': payment_method
+                        }
+                        
+                        add_step("Order Confirmation", "✅", f"Order Number: {api_result['order_number']}")
+                    else:
+                        # Fallback to UI automation if API checkout fails
+                        add_step("Submit Order", "⚠️", "API checkout failed, falling back to UI automation. Error: " + str(api_result.get("error", "Unknown error")))
+                        
+                        submit_selectors = [
+                            'button:has-text("Place Order")',
+                            'button:has-text("Complete Order")',
+                            'button:has-text("Submit Order")',
+                            'input[type="submit"]',
+                            'button[type="submit"]',
+                            '[data-testid="submit-order"]',
+                            '.submit-order',
+                            '#submit-order'
+                        ]
+                        
+                        for selector in submit_selectors:
+                            try:
+                                button = page.query_selector(selector)
+                                if button and button.is_visible():
+                                    add_step("Submit Order", "🔄", f"Found submit button: {selector}")
+                                    button.click()
+                                    order_submitted = True
+                                    add_step("Submit Order", "✅", "Order submitted via UI")
+                                    time.sleep(3)
+                                    break
+                            except Exception as e:
+                                continue
+                        
+                        if not order_submitted:
+                            add_step("Submit Order", "❌", "Could not find submit button")
                 else:
-                    # Fallback to UI automation if API checkout fails
-                    add_step("Submit Order", "⚠️", "API checkout failed, falling back to UI automation. Error: " + str(api_result.get("error", "Unknown error")))
+                    # For x402 payments, skip API checkout and use UI automation
+                    add_step("Submit Order", "⚠️", "x402 payment - using UI automation (API POST not available yet)")
                     
-                    submit_selectors = [
-                        'button:has-text("Place Order")',
-                        'button:has-text("Complete Order")',
-                        'button:has-text("Submit Order")',
-                        '[data-testid="place-order"]',
-                        '[type="submit"]'
+                    # Look for the payment button on checkout page
+                    payment_button_selectors = [
+                        'button:has-text("Pay")',
+                        'button:has-text("Complete Payment")',
+                        'button:has-text("Submit Payment")',
+                        'button:has-text("Pay Now")',
+                        '[data-testid="pay-button"]',
+                        '.pay-button'
                     ]
                     
-                    order_submitted = False
-                    for selector in submit_selectors:
+                    payment_clicked = False
+                    for selector in payment_button_selectors:
                         try:
                             button = page.query_selector(selector)
                             if button and button.is_visible():
+                                add_step("Submit Order", "🔄", f"Clicking payment button: {selector}")
                                 button.click()
-                                order_submitted = True
-                                add_step("Submit Order", "✅", "Order submitted via UI")
-                                time.sleep(5)  # Wait for order processing
+                                payment_clicked = True
+                                add_step("Submit Order", "✅", "Payment button clicked")
+                                time.sleep(5)  # Wait for payment processing
                                 break
-                        except:
+                        except Exception as e:
                             continue
+                    
+                    if not payment_clicked:
+                        add_step("Submit Order", "⚠️", "No payment button found, looking for submit order button")
+                        
+                        # Fallback to regular submit order button
+                        submit_selectors = [
+                            'button:has-text("Place Order")',
+                            'button:has-text("Complete Order")',
+                            'button:has-text("Submit Order")',
+                            'input[type="submit"]',
+                            'button[type="submit"]',
+                            '[data-testid="submit-order"]',
+                            '.submit-order',
+                            '#submit-order'
+                        ]
+                        
+                        for selector in submit_selectors:
+                            try:
+                                button = page.query_selector(selector)
+                                if button and button.is_visible():
+                                    add_step("Submit Order", "🔄", f"Found submit button: {selector}")
+                                    button.click()
+                                    order_submitted = True
+                                    add_step("Submit Order", "✅", "Order submitted via UI")
+                                    time.sleep(3)
+                                    break
+                            except Exception as e:
+                                continue
+                        
+                        if not order_submitted:
+                            add_step("Submit Order", "❌", "Could not find submit button")
                     
                     if order_submitted:
                         # STEP 7: Extract Order Confirmation
@@ -665,7 +871,7 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
                         add_step("Submit Order", "❌", "Could not submit order")
                 
                 # Wait a moment before closing
-                time.sleep(3)
+                time.sleep(2)
                 
                 _automation_results['status'] = 'completed'
                 add_step("Shopping Flow Complete", "🎉", "All steps finished")
@@ -677,12 +883,31 @@ def run_shopping_flow(product_url: str, headers: dict, checkout_data: dict, paym
             
             finally:
                 st.write("="*60)
-                st.write("🔒 Closing browser...")
+                st.write("🔍 Browser is still open for you to review the checkout page.")
+                st.write("👀 Please review the results in the browser window.")
+                st.write("="*60)
                 print("\n" + "="*60)
-                print("🔒 Closing browser...")
+                print("🔍 Browser is still open - waiting for user to review...")
                 print("="*60)
-                browser.close()
-                print("✅ Browser closed")
+                
+                # Wait for user to press a button before closing
+                st.info("⏸️ Browser will remain open. Click the button below when you're done reviewing.")
+                if st.button("✅ Close Browser", key="close_browser_btn"):
+                    st.write("🔒 Closing browser...")
+                    print("🔒 User requested browser close")
+                    browser.close()
+                    print("✅ Browser closed")
+                    st.success("✅ Browser closed successfully")
+                else:
+                    # Keep browser open until button is clicked
+                    st.warning("⏳ Browser is still open. Close this tab or click the button above to close the browser.")
+                    # Note: In Streamlit, the browser will remain open until the script reruns
+                    # We'll add a timeout as a safety measure
+                    print("⏳ Waiting for user action... (Browser will auto-close after 5 minutes)")
+                    time.sleep(300)  # 5 minute timeout
+                    print("⏱️ Timeout reached, closing browser")
+                    browser.close()
+                    print("✅ Browser closed after timeout")
                 
     except ImportError as e:
         error_msg = f"Playwright not installed: {str(e)}"
@@ -794,6 +1019,58 @@ def main():
             with col2:
                 cvv = st.text_input("CVV", value="123", type="password")
         
+        elif payment_method == 'x402':
+            st.subheader("🔗 Solana Wallet Configuration")
+            
+            # Option 1: Use default client.json
+            use_default_wallet = st.checkbox("Use default wallet (client.json)", value=True)
+            
+            if use_default_wallet:
+                # Try to load client.json from the project root
+                client_json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'client.json')
+                if os.path.exists(client_json_path):
+                    try:
+                        with open(client_json_path, 'r') as f:
+                            wallet_data = json.load(f)
+                        st.success(f"✅ Loaded wallet from client.json ({len(wallet_data)} bytes)")
+                        # Store in session state
+                        st.session_state['solana_wallet_key'] = wallet_data
+                    except Exception as e:
+                        st.error(f"❌ Failed to load client.json: {e}")
+                        st.session_state['solana_wallet_key'] = None
+                else:
+                    st.warning("⚠️ client.json not found in project root")
+                    st.session_state['solana_wallet_key'] = None
+            else:
+                # Option 2: Upload custom wallet file
+                st.info("Upload your Solana wallet keypair JSON file")
+                uploaded_file = st.file_uploader(
+                    "Choose wallet JSON file",
+                    type=['json'],
+                    help="Upload your Solana keypair in JSON format (array of 64 numbers)"
+                )
+                
+                if uploaded_file is not None:
+                    try:
+                        wallet_data = json.load(uploaded_file)
+                        if isinstance(wallet_data, list) and len(wallet_data) == 64:
+                            st.success(f"✅ Wallet loaded successfully")
+                            st.session_state['solana_wallet_key'] = wallet_data
+                        else:
+                            st.error("❌ Invalid wallet format. Expected array of 64 numbers.")
+                            st.session_state['solana_wallet_key'] = None
+                    except Exception as e:
+                        st.error(f"❌ Failed to parse wallet file: {e}")
+                        st.session_state['solana_wallet_key'] = None
+                else:
+                    st.session_state['solana_wallet_key'] = None
+            
+            # Show wallet status
+            if st.session_state.get('solana_wallet_key'):
+                st.caption("🔐 Wallet is configured and ready for onchain payments")
+            else:
+                st.warning("⚠️ No wallet configured. Onchain payments will not work.")
+        
         st.divider()
         
         # Signature Algorithm
@@ -838,15 +1115,19 @@ def main():
             with col_zip:
                 zip_code = st.text_input("ZIP", value="10001")
         
-        # Transaction amount
-        st.subheader("Transaction Details")
-        transaction_amount = st.number_input(
-            "Amount ($)",
-            min_value=0.0,
-            max_value=1000.0,
-            value=10.0,
-            step=1.0
-        )
+        # Transaction amount will be determined from cart total
+        transaction_amount = 0.0
+        
+        # Network selection for x402 payments
+        if payment_method == 'x402':
+            network = st.selectbox(
+                "Solana Network",
+                ["devnet", "mainnet"],
+                index=0,
+                help="Choose which Solana network to use for x402 payments"
+            )
+        else:
+            network = "devnet"  # Default for non-x402
         
         # Check spending limit before starting
         can_proceed, limit_message = check_spending_limit(
@@ -932,7 +1213,7 @@ def main():
                 
                 # Run shopping flow
                 with st.spinner("🤖 Agent is working..."):
-                    run_shopping_flow(product_url, headers, checkout_data, payment_method)
+                    run_shopping_flow(product_url, headers, checkout_data, payment_method, network)
                 
                 # Display results
                 st.divider()

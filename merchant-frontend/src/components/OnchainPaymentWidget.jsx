@@ -13,11 +13,19 @@ import { siennaPaymentAPI } from '../services/api';
 const OnchainPaymentWidget = ({ amount, orderData, onPaymentComplete, onError, network = 'devnet' }) => {
   const [processing, setProcessing] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   // Handle onchain payment - automated flow
   const handleOnchainPayment = async () => {
     setProcessing(true);
+    setPaymentDetails(null);
+    setPaymentSuccess(false);
+    
     try {
+      console.log('💰 Initiating Sienna payment...');
+      console.log('   Amount:', amount, 'USDC');
+      console.log('   Network:', network);
+      
       // The complete payment flow is now handled in the API
       // This includes: quote request, transaction creation, signing, and submission
       const result = await siennaPaymentAPI.requestPaymentQuote(amount, orderData, network);
@@ -26,18 +34,33 @@ const OnchainPaymentWidget = ({ amount, orderData, onPaymentComplete, onError, n
         throw new Error(result.error);
       }
 
-      // Payment successful
-      onPaymentComplete({
+      console.log('✅ Payment successful!');
+      console.log('   Signature:', result.signature);
+      console.log('   Explorer URL:', result.explorerUrl);
+
+      // Store payment details to display
+      setPaymentDetails({
         signature: result.signature,
         explorerUrl: result.explorerUrl,
         amountReceived: result.amountReceived,
-        paymentMethod: 'onchain',
         paymentDetails: result.paymentDetails,
       });
+      setPaymentSuccess(true);
+
+      // Payment successful - call the callback after a brief delay to show the details
+      setTimeout(() => {
+        onPaymentComplete({
+          signature: result.signature,
+          explorerUrl: result.explorerUrl,
+          amountReceived: result.amountReceived,
+          paymentMethod: 'onchain',
+          paymentDetails: result.paymentDetails,
+        });
+      }, 2000);
 
     } catch (err) {
+      console.error('❌ Payment failed:', err);
       onError('Onchain payment failed: ' + err.message);
-    } finally {
       setProcessing(false);
     }
   };
@@ -47,35 +70,79 @@ const OnchainPaymentWidget = ({ amount, orderData, onPaymentComplete, onError, n
       <h3 style={styles.title}>Onchain Payment (USDC on Solana)</h3>
       
       <div style={styles.paymentSection}>
-        <div style={styles.paymentInfo}>
-          <div style={styles.infoRow}>
-            <span style={styles.label}>Amount:</span>
-            <span style={styles.value}>{amount} USDC</span>
-          </div>
-          <div style={styles.infoRow}>
-            <span style={styles.label}>Network:</span>
-            <span style={styles.value}>Solana {network === 'mainnet' ? 'Mainnet' : 'Devnet'}</span>
-          </div>
-          <div style={styles.infoRow}>
-            <span style={styles.label}>Protocol:</span>
-            <span style={styles.value}>x402 by Shanni</span>
-          </div>
-        </div>
+        {!paymentSuccess ? (
+          <>
+            <div style={styles.paymentInfo}>
+              <div style={styles.infoRow}>
+                <span style={styles.label}>Amount:</span>
+                <span style={styles.value}>{amount} USDC</span>
+              </div>
+              <div style={styles.infoRow}>
+                <span style={styles.label}>Network:</span>
+                <span style={styles.value}>Solana {network === 'mainnet' ? 'Mainnet' : 'Devnet'}</span>
+              </div>
+              <div style={styles.infoRow}>
+                <span style={styles.label}>Protocol:</span>
+                <span style={styles.value}>x402 by Shanni</span>
+              </div>
+            </div>
 
-        <button
-          onClick={handleOnchainPayment}
-          disabled={processing}
-          style={{
-            ...styles.payButton,
-            ...(processing ? styles.payButtonDisabled : {}),
-          }}
-        >
-          {processing ? 'Processing Payment...' : `Pay ${amount} USDC with Onchain`}
-        </button>
+            <button
+              onClick={handleOnchainPayment}
+              disabled={processing}
+              style={{
+                ...styles.payButton,
+                ...(processing ? styles.payButtonDisabled : {}),
+              }}
+            >
+              {processing ? '⏳ Processing Payment...' : `💳 Pay ${amount} USDC with Onchain`}
+            </button>
 
-        <p style={styles.helperText}>
-          Automated onchain payment using USDC on Solana via x402 protocol
-        </p>
+            <p style={styles.helperText}>
+              Automated onchain payment using USDC on Solana via x402 protocol
+            </p>
+          </>
+        ) : (
+          <div style={styles.successSection}>
+            <div style={styles.successIcon}>✅</div>
+            <h4 style={styles.successTitle}>Payment Successful!</h4>
+            
+            <div style={styles.transactionDetails}>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Amount Paid:</span>
+                <span style={styles.detailValue}>{paymentDetails.amountReceived} USDC</span>
+              </div>
+              
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Transaction Signature:</span>
+                <div style={styles.signatureContainer}>
+                  <code style={styles.signature}>
+                    {paymentDetails.signature.slice(0, 8)}...{paymentDetails.signature.slice(-8)}
+                  </code>
+                  {paymentDetails.explorerUrl && (
+                    <a 
+                      href={paymentDetails.explorerUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={styles.explorerLink}
+                    >
+                      View on Explorer ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Network:</span>
+                <span style={styles.detailValue}>Solana {network === 'mainnet' ? 'Mainnet' : 'Devnet'}</span>
+              </div>
+            </div>
+            
+            <p style={styles.processingText}>
+              🎉 Completing your order...
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -141,6 +208,73 @@ const styles = {
     color: '#666',
     textAlign: 'center',
     margin: '0.5rem 0 0 0',
+  },
+  successSection: {
+    textAlign: 'center',
+    padding: '1rem',
+  },
+  successIcon: {
+    fontSize: '3rem',
+    marginBottom: '1rem',
+  },
+  successTitle: {
+    fontSize: '1.3rem',
+    color: '#27ae60',
+    marginBottom: '1.5rem',
+    fontWeight: 'bold',
+  },
+  transactionDetails: {
+    backgroundColor: 'white',
+    padding: '1.25rem',
+    borderRadius: '8px',
+    border: '1px solid #E0E0E0',
+    marginBottom: '1rem',
+    textAlign: 'left',
+  },
+  detailRow: {
+    marginBottom: '1rem',
+  },
+  detailLabel: {
+    display: 'block',
+    fontSize: '0.85rem',
+    color: '#666',
+    marginBottom: '0.5rem',
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: '1rem',
+    color: '#2C3E50',
+    fontWeight: '600',
+  },
+  signatureContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+  },
+  signature: {
+    fontSize: '0.9rem',
+    color: '#2C3E50',
+    fontWeight: '600',
+    fontFamily: 'monospace',
+    backgroundColor: '#f8f9fa',
+    padding: '0.5rem',
+    borderRadius: '4px',
+    display: 'block',
+  },
+  explorerLink: {
+    color: '#3498db',
+    textDecoration: 'none',
+    fontSize: '0.9rem',
+    fontWeight: '600',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.25rem',
+  },
+  processingText: {
+    fontSize: '0.95rem',
+    color: '#27ae60',
+    fontWeight: '600',
+    margin: '1rem 0 0 0',
   },
   agentSection: {
     display: 'flex',

@@ -48,10 +48,13 @@ const OrderSuccessPage = () => {
             <div>
               <h2 style={styles.orderNumber}>Order #{order.order_number}</h2>
               <p style={styles.orderDate}>
-                Order placed on {new Date(order.created_at).toLocaleDateString('en-US', {
+                Order placed on {new Date(order.created_at).toLocaleString('en-US', {
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
                 })}
               </p>
             </div>
