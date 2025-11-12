@@ -1,4 +1,4 @@
-/* © 2025 Visa.
+/* © 2025 Shanni.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { ordersAPI } from '../services/api';
-import OnchainPaymentAgent from '../components/OnchainPaymentAgent';
+import OnchainPaymentWidget from '../components/OnchainPaymentWidget';
 
 const CheckoutPage = () => {
   const { cart, sessionId, getCartTotal, clearCart } = useCart();
@@ -48,7 +48,7 @@ const CheckoutPage = () => {
     billingCountry: 'United States',
     
     // Payment
-    paymentMethod: 'credit_card',
+    paymentMethod: 'onchain',
     cardNumber: '',
     expiryDate: '',
     cvv: '',
@@ -82,8 +82,10 @@ const CheckoutPage = () => {
       required.push('billingFirstName', 'billingLastName', 'billingAddress1', 'billingCity', 'billingState', 'billingZipCode');
     }
     
-    // Add payment fields
-    required.push('cardNumber', 'expiryDate', 'cvv', 'nameOnCard');
+    // Only add payment fields if credit card is selected
+    if (formData.paymentMethod === 'credit_card') {
+      required.push('cardNumber', 'expiryDate', 'cvv', 'nameOnCard');
+    }
     
     const missing = required.filter(field => !formData[field].trim());
     
@@ -99,25 +101,28 @@ const CheckoutPage = () => {
       return false;
     }
     
-    // Basic card number validation (remove spaces and check length)
-    const cardNumber = formData.cardNumber.replace(/\s/g, '');
-    if (cardNumber.length < 13 || cardNumber.length > 19) {
-      setError('Please enter a valid card number');
-      return false;
-    }
-    
-    // Expiry date validation (MM/YY or MM/YYYY format)
-    const expiryRegex = /^(0[1-9]|1[0-2])\/([0-9]{2}|[0-9]{4})$/;
-    if (!expiryRegex.test(formData.expiryDate)) {
-      setError('Please enter expiry date in MM/YY format');
-      return false;
-    }
-    
-    // CVV validation
-    const cvv = formData.cvv.trim();
-    if (cvv.length < 3 || cvv.length > 4) {
-      setError('Please enter a valid CVV (3-4 digits)');
-      return false;
+    // Only validate card fields if credit card payment is selected
+    if (formData.paymentMethod === 'credit_card') {
+      // Basic card number validation (remove spaces and check length)
+      const cardNumber = formData.cardNumber.replace(/\s/g, '');
+      if (cardNumber.length < 13 || cardNumber.length > 19) {
+        setError('Please enter a valid card number');
+        return false;
+      }
+      
+      // Expiry date validation (MM/YY or MM/YYYY format)
+      const expiryRegex = /^(0[1-9]|1[0-2])\/([0-9]{2}|[0-9]{4})$/;
+      if (!expiryRegex.test(formData.expiryDate)) {
+        setError('Please enter expiry date in MM/YY format');
+        return false;
+      }
+      
+      // CVV validation
+      const cvv = formData.cvv.trim();
+      if (cvv.length < 3 || cvv.length > 4) {
+        setError('Please enter a valid CVV (3-4 digits)');
+        return false;
+      }
     }
     
     return true;
@@ -412,7 +417,7 @@ const CheckoutPage = () => {
                 )}
                 
                 {formData.paymentMethod === 'onchain' && (
-                  <OnchainPaymentAgent
+                  <OnchainPaymentWidget
                     amount={total}
                     orderData={{
                       customerEmail: formData.email,
@@ -426,10 +431,39 @@ const CheckoutPage = () => {
                       },
                       items: cart.items
                     }}
-                    onPaymentComplete={(paymentInfo) => {
+                    onPaymentComplete={async (paymentInfo) => {
                       // Handle successful onchain payment
                       console.log('Onchain payment completed:', paymentInfo);
-                      // You can proceed with order creation here
+                      
+                      // Create order with onchain payment info
+                      try {
+                        const shippingAddress = `${formData.firstName} ${formData.lastName}\n${formData.company ? formData.company + '\n' : ''}${formData.address1}\n${formData.address2 ? formData.address2 + '\n' : ''}${formData.city}, ${formData.state} ${formData.zipCode}\n${formData.country}`;
+                        
+                        const checkoutData = {
+                          customer_name: `${formData.firstName} ${formData.lastName}`,
+                          customer_email: formData.email,
+                          shipping_address: shippingAddress,
+                          phone: formData.phone,
+                          special_instructions: formData.specialInstructions || null,
+                          payment_method: 'x402',
+                          payment_signature: paymentInfo.signature,
+                          payment_network: 'devnet',
+                          onchain_explorer_url: paymentInfo.explorerUrl,
+                        };
+                        
+                        const response = await ordersAPI.checkout(sessionId, checkoutData);
+                        await clearCart();
+                        
+                        navigate('/order-success', { 
+                          state: { 
+                            order: response.data.order,
+                            payment: { ...response.data.payment, ...paymentInfo },
+                            customerInfo: formData 
+                          }
+                        });
+                      } catch (err) {
+                        setError('Failed to create order after payment: ' + err.message);
+                      }
                     }}
                     onError={(errorMsg) => {
                       setError(errorMsg);
@@ -632,13 +666,15 @@ const styles = {
   },
   backButton: {
     background: 'linear-gradient(135deg, #90C6EA 0%, #2F8DCC 100%)',
-    border: '2px solid #FFC919',
+    border: '2px solid #E8E8E8',
     padding: '0.5rem 1rem',
     borderRadius: '20px',
     cursor: 'pointer',
     marginBottom: '1rem',
     color: 'white',
     fontWeight: 'bold',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'all 0.3s ease',
   },
   title: {
     fontSize: '2rem',
@@ -653,20 +689,20 @@ const styles = {
     gap: '3rem',
   },
   formSection: {
-    background: 'linear-gradient(to bottom, #FFF0F5 0%, #FFB6C1 100%)',
+    background: 'linear-gradient(to bottom, #FFFFFF 0%, #FFF5F8 100%)',
     padding: '2rem',
-    borderRadius: '25px',
-    boxShadow: '0 6px 16px rgba(24,70,35,0.15)',
-    border: '4px solid #FFC919',
+    borderRadius: '20px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    border: '1px solid #F0F0F0',
   },
   section: {
     marginBottom: '2rem',
   },
   sectionTitle: {
     fontSize: '1.3rem',
-    color: '#184623',
+    color: '#2C3E50',
     marginBottom: '1rem',
-    borderBottom: '2px solid #FFC919',
+    borderBottom: '2px solid #E8E8E8',
     paddingBottom: '0.5rem',
     fontWeight: 'bold',
   },
@@ -678,22 +714,25 @@ const styles = {
   },
   input: {
     padding: '0.75rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    border: '1px solid #E0E0E0',
+    borderRadius: '8px',
     fontSize: '1rem',
     marginBottom: '1rem',
     width: '100%',
     boxSizing: 'border-box',
+    transition: 'border-color 0.3s ease',
+    backgroundColor: '#FAFAFA',
   },
   textarea: {
     padding: '0.75rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    border: '1px solid #E0E0E0',
+    borderRadius: '8px',
     fontSize: '1rem',
     marginBottom: '1rem',
     width: '100%',
     boxSizing: 'border-box',
     resize: 'vertical',
+    backgroundColor: '#FAFAFA',
   },
   checkbox: {
     display: 'flex',
@@ -706,9 +745,9 @@ const styles = {
   billingForm: {
     marginTop: '1.5rem',
     padding: '1.5rem',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    border: '1px solid #e9ecef',
+    backgroundColor: '#FAFAFA',
+    borderRadius: '12px',
+    border: '1px solid #E8E8E8',
   },
   billingTitle: {
     fontSize: '1.1rem',
@@ -727,9 +766,10 @@ const styles = {
     fontSize: '0.9rem',
   },
   shippingOption: {
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    border: '1px solid #E0E0E0',
+    borderRadius: '8px',
     padding: '1rem',
+    backgroundColor: '#FAFAFA',
   },
   paymentMethods: {
     marginBottom: '1rem',
@@ -738,26 +778,27 @@ const styles = {
     marginTop: '1rem',
   },
   error: {
-    backgroundColor: '#FFE4E4',
-    color: '#FF6B6B',
+    backgroundColor: '#FFF5F5',
+    color: '#E53E3E',
     padding: '1rem',
-    borderRadius: '20px',
-    border: '2px solid #FFB6C1',
+    borderRadius: '12px',
+    border: '1px solid #FEB2B2',
     marginBottom: '1rem',
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   submitButton: {
     background: 'linear-gradient(135deg, #4A8F5D 0%, #86C994 100%)',
-    color: '#F3EFCD',
-    border: '3px solid #FFC919',
+    color: 'white',
+    border: 'none',
     padding: '1rem 2rem',
-    borderRadius: '25px',
+    borderRadius: '12px',
     cursor: 'pointer',
     fontSize: '1.1rem',
     fontWeight: 'bold',
     width: '100%',
     marginTop: '1rem',
-    boxShadow: '0 4px 12px rgba(24,70,35,0.3)',
+    boxShadow: '0 4px 16px rgba(74,143,93,0.3)',
+    transition: 'all 0.3s ease',
   },
   summarySection: {
     height: 'fit-content',
@@ -765,17 +806,17 @@ const styles = {
     top: '2rem',
   },
   orderSummary: {
-    background: 'linear-gradient(to bottom, #FFF0F5 0%, #FFB6C1 100%)',
+    background: 'linear-gradient(to bottom, #FFFFFF 0%, #FFF5F8 100%)',
     padding: '1.5rem',
-    borderRadius: '25px',
-    boxShadow: '0 6px 16px rgba(24,70,35,0.15)',
-    border: '4px solid #FFC919',
+    borderRadius: '20px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    border: '1px solid #F0F0F0',
   },
   summaryTitle: {
     fontSize: '1.3rem',
-    color: '#184623',
+    color: '#2C3E50',
     marginBottom: '1rem',
-    borderBottom: '2px solid #FFC919',
+    borderBottom: '2px solid #E8E8E8',
     paddingBottom: '0.5rem',
     fontWeight: 'bold',
   },
@@ -829,8 +870,8 @@ const styles = {
     justifyContent: 'space-between',
     fontSize: '1.2rem',
     fontWeight: 'bold',
-    color: '#184623',
-    borderTop: '2px solid #FFC919',
+    color: '#2C3E50',
+    borderTop: '2px solid #E8E8E8',
     paddingTop: '0.5rem',
     marginTop: '0.5rem',
   },

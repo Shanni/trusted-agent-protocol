@@ -1,4 +1,4 @@
-/* © 2025 Visa.
+/* © 2025 Shanni.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -101,6 +101,76 @@ export const ordersAPI = {
 export const solanaAPI = {
   requestQuote: (sessionId, payload) => api.post(`/api/cart/${sessionId}/solana/quote`, payload),
   confirmPayment: (sessionId, payload) => api.post(`/api/cart/${sessionId}/solana/confirm`, payload),
+};
+
+// Project Sienna Onchain Payment API
+export const siennaPaymentAPI = {
+  // Execute complete payment flow via backend
+  requestPaymentQuote: async (amount, orderData = null, network = 'devnet') => {
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      
+      console.log('💰 Executing Sienna payment via backend...');
+      console.log(`   Amount: ${amount} USDC`);
+      console.log(`   Network: ${network}`);
+      
+      const response = await fetch(`${apiBase}/api/payment/sienna/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount,
+          orderData: orderData,
+          network: network
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Payment failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      console.log('✅ Payment completed successfully');
+      console.log('   Signature:', result.signature);
+
+      return {
+        success: result.success,
+        signature: result.signature,
+        explorerUrl: result.explorerUrl,
+        amountReceived: result.amountReceived,
+        paymentDetails: result.paymentDetails,
+        error: result.error
+      };
+
+    } catch (error) {
+      console.error('❌ Payment error:', error);
+      throw error;
+    }
+  },
+
+  // Get payment quote only (for display purposes)
+  getPaymentQuote: async (amount) => {
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${apiBase}/api/payment/sienna/quote?amount=${amount}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get quote: ${response.status}`);
+      }
+
+      return await response.json();
+      
+    } catch (error) {
+      console.error('Failed to get payment quote:', error);
+      throw error;
+    }
+  },
 };
 
 // Individual exports for convenience
