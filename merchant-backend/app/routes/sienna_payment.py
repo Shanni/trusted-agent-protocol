@@ -6,20 +6,41 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
-from typing import Optional
+# Standard library imports
 import json
 import base64
 import os
-import requests
 import time
+from typing import Optional
+
+# Third-party imports
+import requests
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+
+# Solana imports (lazy loaded in functions)
+# from solana.rpc.api import Client
+# from solders.keypair import Keypair
+# from solders.pubkey import Pubkey
+# from solders.transaction import Transaction
+# from spl.token.instructions import ...
 
 router = APIRouter()
 
-# Load client.json for wallet keypair
+# Constants
 CLIENT_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'client.json')
+SIENNA_API_BASE = "https://api.projectsienna.xyz"
+SOLANA_MAINNET_RPC = "https://api.mainnet-beta.solana.com"
+SOLANA_DEVNET_RPC = "https://api.devnet.solana.com"
 
+# Pydantic models
+class SiennaPaymentRequest(BaseModel):
+    """Request model for Sienna payment execution"""
+    amount: float
+    orderData: Optional[dict] = None
+    network: Optional[str] = "devnet"
+
+# Helper functions
 def load_wallet_keypair():
     """Load the Solana wallet keypair from client.json"""
     try:
@@ -29,10 +50,29 @@ def load_wallet_keypair():
         print(f"Warning: Could not load client.json: {e}")
         return None
 
-class SiennaPaymentRequest(BaseModel):
-    amount: float
-    orderData: Optional[dict] = None
-    network: Optional[str] = "devnet"
+def get_quote_url(amount: float, network: Optional[str] = None) -> str:
+    """Build the quote URL with optional network parameter"""
+    if network:
+        return f"{SIENNA_API_BASE}/api/payment?network={network}&amount={amount}"
+    return f"{SIENNA_API_BASE}/api/payment?amount={amount}"
+
+def get_explorer_url(signature: str, network: str) -> str:
+    """Generate Solana explorer URL for a transaction"""
+    cluster_param = "" if network == "mainnet" else "?cluster=devnet"
+    return f"https://explorer.solana.com/tx/{signature}{cluster_param}"
+
+def create_fallback_result(amount: float, recipient: str, network: str, prefix: str = "simulated") -> dict:
+    """Create a fallback payment result for testing"""
+    signature = f"{prefix}_tx_{int(time.time())}"
+    return {
+        "paymentDetails": {
+            "amountReceived": int(amount * 1_000_000),
+            "amountUSDC": amount,
+            "signature": signature,
+            "recipient": recipient,
+            "explorerUrl": get_explorer_url(signature, network)
+        }
+    }
 
 @router.post("/api/payment/sienna/execute")
 async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
@@ -57,13 +97,9 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
         
         print(f"✅ Wallet loaded from client.json")
         
-        # 1) Request payment quote from api.projectsienna.xyz
+        # Request payment quote from api.projectsienna.xyz
         print(f"\n📤 Requesting payment quote...")
-        # Include network parameter if specified
-        if network:
-            quote_url = f"https://api.projectsienna.xyz/api/payment?network={network}&amount={amount}"
-        else:
-            quote_url = f"https://api.projectsienna.xyz/api/payment?amount={amount}"
+        quote_url = get_quote_url(amount, network)
         print(f"  Quote URL: {quote_url}")
         quote_response = requests.get(quote_url)
         
@@ -90,28 +126,26 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
         print(f"\n🔨 Building and sending Solana transaction...")
         
         try:
-            # Import Solana libraries
+            # Import Solana libraries (lazy import for better startup time)
             from solana.rpc.api import Client
             from solders.keypair import Keypair
             from solders.pubkey import Pubkey
             from solders.transaction import Transaction
+            from solders.message import Message
+            from solders.instruction import Instruction
             from spl.token.instructions import (
-                create_associated_token_account,
                 get_associated_token_address,
                 transfer,
                 TransferParams,
                 TOKEN_PROGRAM_ID,
+                create_idempotent_associated_token_account,
             )
             
             # Create connection based on cluster from API response
             api_cluster = extra.get('cluster', 'mainnet')
             actual_network = api_cluster
-            
-            if actual_network == "mainnet":
-                connection = Client("https://api.mainnet-beta.solana.com", "confirmed")
-            else:
-                connection = Client("https://api.devnet.solana.com", "confirmed")
-            
+            rpc_url = SOLANA_MAINNET_RPC if actual_network == "mainnet" else SOLANA_DEVNET_RPC
+            connection = Client(rpc_url, "confirmed")
             print(f"  Connected to Solana {actual_network}")
             
             # Create payer keypair from client.json
@@ -181,33 +215,25 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
             print(f"\n  Building transaction...")
             recent_blockhash_response = connection.get_latest_blockhash()
             recent_blockhash = recent_blockhash_response.value.blockhash
-            
-            from solders.message import Message
-            from solders.instruction import Instruction
-            
             instructions = []
             
-            # Add create payer account instruction if needed (following example)
+            # Add create payer account instruction if needed
             if not payer_account_exists:
                 print(f"  + Adding create payer token account instruction")
-                from spl.token.instructions import create_idempotent_associated_token_account
                 create_payer_ix = create_idempotent_associated_token_account(
-                    payer.pubkey(),  # payer
-                    payer.pubkey(),  # owner
-                    mint  # mint
+                    payer.pubkey(),
+                    payer.pubkey(),
+                    mint
                 )
                 instructions.append(create_payer_ix)
             
-            # Add create recipient account instruction if needed (following example)
+            # Add create recipient account instruction if needed
             if not recipient_account_exists:
                 print(f"  + Adding create recipient token account instruction")
-                recipient_wallet = Pubkey.from_string(extra['recipientWallet'])
-                
-                from spl.token.instructions import create_idempotent_associated_token_account
                 create_recipient_ix = create_idempotent_associated_token_account(
-                    payer.pubkey(),  # payer
-                    recipient_wallet,  # owner
-                    mint  # mint
+                    payer.pubkey(),
+                    recipient_wallet,
+                    mint
                 )
                 instructions.append(create_recipient_ix)
             
@@ -252,8 +278,7 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
                 print(f"  ✅ Transaction confirmed!")
                 
                 # Create explorer URL
-                cluster_param = "" if actual_network == "mainnet" else "?cluster=devnet"
-                explorer_url = f"https://explorer.solana.com/tx/{signature}{cluster_param}"
+                explorer_url = get_explorer_url(str(signature), actual_network)
                 
                 result = {
                     "paymentDetails": {
@@ -275,16 +300,8 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
                 print(f"  Falling back to simulation for testing...")
                 
                 # Fallback to simulation if submission fails
-                cluster_param = "" if actual_network == "mainnet" else "?cluster=devnet"
-                result = {
-                    "paymentDetails": {
-                        "amountReceived": amount_required,
-                        "amountUSDC": amount,
-                        "signature": f"simulated_tx_{int(time.time())}",
-                        "recipient": str(recipient_token_account),
-                        "explorerUrl": f"https://explorer.solana.com/tx/simulated_tx_{int(time.time())}{cluster_param}"
-                    }
-                }
+                result = create_fallback_result(amount, str(recipient_token_account), actual_network, "simulated")
+                result['paymentDetails']['amountReceived'] = amount_required
                 
                 print(f"\n📥 Payment Result (Simulated):")
                 print(f"  Signature: {result['paymentDetails']['signature']}")
@@ -292,39 +309,19 @@ async def execute_sienna_payment(payment_request: SiennaPaymentRequest):
             
         except ImportError as e:
             print(f"  ⚠️ Solana libraries not available: {e}")
-            # Fallback to simple simulation
-            cluster_param = "" if network == "mainnet" else "?cluster=devnet"
-            result = {
-                "paymentDetails": {
-                    "amountReceived": int(amount * 1_000_000),
-                    "amountUSDC": amount,
-                    "signature": f"fallback_tx_{int(time.time())}",
-                    "recipient": extra['recipientWallet'],
-                    "explorerUrl": f"https://explorer.solana.com/tx/fallback_tx_{int(time.time())}{cluster_param}"
-                }
-            }
+            result = create_fallback_result(amount, extra['recipientWallet'], network, "fallback")
         except Exception as e:
             print(f"  ❌ Payment execution error: {e}")
-            # Still return a result for testing
-            cluster_param = "" if network == "mainnet" else "?cluster=devnet"
-            result = {
-                "paymentDetails": {
-                    "amountReceived": int(amount * 1_000_000),
-                    "amountUSDC": amount,
-                    "signature": f"error_tx_{int(time.time())}",
-                    "recipient": extra['recipientWallet'],
-                    "explorerUrl": f"https://explorer.solana.com/tx/error_tx_{int(time.time())}{cluster_param}"
-                }
-            }
+            result = create_fallback_result(amount, extra['recipientWallet'], network, "error")
         
         # Return success response
-        cluster_param = "" if network == "mainnet" else "?cluster=devnet"
+        payment_details = result.get('paymentDetails', {})
         return {
             "success": True,
-            "signature": result.get('paymentDetails', {}).get('signature', f'agent_tx_{amount}_{int(time.time())}'),
-            "explorerUrl": result.get('paymentDetails', {}).get('explorerUrl', f'https://explorer.solana.com/tx/agent_tx_{amount}_{int(time.time())}{cluster_param}'),
+            "signature": payment_details.get('signature', f'agent_tx_{amount}_{int(time.time())}'),
+            "explorerUrl": payment_details.get('explorerUrl', get_explorer_url(f'agent_tx_{amount}_{int(time.time())}', network)),
             "amountReceived": amount,
-            "paymentDetails": result.get('paymentDetails', {})
+            "paymentDetails": payment_details
         }
         
     except HTTPException:
@@ -342,7 +339,7 @@ async def get_sienna_quote(amount: float = Query(..., gt=0)):
     Returns the payment details without executing the payment
     """
     try:
-        quote_url = f"https://api.projectsienna.xyz/api/payment?amount={amount}"
+        quote_url = get_quote_url(amount)
         response = requests.get(quote_url)
         
         if response.status_code != 402:
