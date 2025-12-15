@@ -323,7 +323,11 @@ For merchants, the Trusted Agent Protocol describes a standardized set of mechan
 - **Securely Receive Customer & Payment Identifiers:** The protocol defines a standardized way for a verified agent to pass essential customer information directly to merchants. This allows merchants to streamline the checkout process by receiving trusted data to pre-fill forms or identify the customer.
 
 ## Example Agent Verification for Payments
-![](./assets/trusted-agent-protocol-flow.png)
+![TAP Agent Interface](./assets/tap-agent.png)
+
+![Trusted Agent Protocol Flow](./assets/trusted-agent-protocol-flow.png)
+
+![Commerce Confirmation](./commerce-confirmation.png)
 
 ## Quick Start
 
